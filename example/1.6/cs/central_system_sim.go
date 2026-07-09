@@ -234,15 +234,19 @@ func main() {
 	// Add handlers for dis/connection of charge points
 	centralSystem.SetNewChargePointHandler(func(chargePoint ocpp16.ChargePointConnection) {
 		handler.chargePoints[chargePoint.ID()] = &ChargePointState{connectors: map[int]*ConnectorInfo{}, transactions: map[int]*TransactionInfo{}}
+		onConnect() // hyde/lab: registry metrics
 		log.WithField("client", chargePoint.ID()).Info("new charge point connected")
 		go exampleRoutine(chargePoint.ID(), handler)
 	})
 	centralSystem.SetChargePointDisconnectedHandler(func(chargePoint ocpp16.ChargePointConnection) {
+		onDisconnect() // hyde/lab: registry metrics
 		log.WithField("client", chargePoint.ID()).Info("charge point disconnected")
 		delete(handler.chargePoints, chargePoint.ID())
 	})
 	ocppj.SetLogger(log.WithField("logger", "ocppj"))
 	ws.SetLogger(log.WithField("logger", "websocket"))
+	// hyde/lab: OTel/Prometheus registry metrics on /metrics
+	startMetrics()
 	// Run central system
 	log.Infof("starting central system on port %v", listenPort)
 	centralSystem.Start(listenPort, "/{ws}")

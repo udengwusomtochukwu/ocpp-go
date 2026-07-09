@@ -20,6 +20,7 @@ services:
       - SERVER_LISTEN_PORT=8887
       - LOG_LEVEL=info
       - HEARTBEAT_INTERVAL=60
+      - METRICS_PORT=2112       # OTel/Prometheus /metrics
     # No host port publish: Traefik (on dokploy-network) is the ingress.
     networks:
       - sim
@@ -41,6 +42,39 @@ services:
     networks:
       - sim
     tty: true
+
+  # --- observability: scrape the CS registry metrics + visualize ---
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: ocpp-lab-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=6h
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - sim
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: ocpp-lab-grafana
+    depends_on:
+      - prometheus
+    environment:
+      # Served under a sub-path off the existing lab host (no extra DNS record).
+      - GF_SERVER_ROOT_URL=https://ocpp-lab.hydecharge.com/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=ocpplab
+      - GF_USERS_DEFAULT_THEME=dark
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - sim
+      - dokploy-network
 
 networks:
   sim:

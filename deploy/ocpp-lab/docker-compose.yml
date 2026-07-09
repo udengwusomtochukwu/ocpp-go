@@ -57,7 +57,10 @@ services:
       - sim
 
   grafana:
-    image: grafana/grafana:11.2.0
+    build:
+      context: ./grafana
+      dockerfile: Dockerfile
+    image: hyde/ocpp-lab-grafana:lab
     container_name: ocpp-lab-grafana
     depends_on:
       - prometheus
@@ -70,9 +73,6 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=ocpplab
       - GF_USERS_DEFAULT_THEME=dark
-    volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     networks:
       - sim
       - dokploy-network

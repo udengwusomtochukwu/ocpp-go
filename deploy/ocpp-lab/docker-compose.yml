@@ -20,7 +20,8 @@ services:
       - SERVER_LISTEN_PORT=8887
       - LOG_LEVEL=info
       - HEARTBEAT_INTERVAL=60
-      - METRICS_PORT=2112       # OTel/Prometheus /metrics
+      - METRICS_PORT=2112              # OTel/Prometheus /metrics (pull)
+      - OTLP_ENDPOINT=otel-collector:4317  # OTLP traces (push) -> collector
     # No host port publish: Traefik (on dokploy-network) is the ingress.
     networks:
       - sim
@@ -72,6 +73,26 @@ services:
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - sim
+      - dokploy-network
+
+  # --- tracing: OTLP push pipeline (CS -> collector -> Jaeger) ---
+  otel-collector:
+    image: otel/opentelemetry-collector:0.109.0
+    container_name: ocpp-lab-otelcol
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    networks:
+      - sim
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    container_name: ocpp-lab-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - QUERY_BASE_PATH=/jaeger
     networks:
       - sim
       - dokploy-network

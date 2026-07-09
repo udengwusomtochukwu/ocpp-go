@@ -245,6 +245,9 @@ func main() {
 	})
 	ocppj.SetLogger(log.WithField("logger", "ocppj"))
 	ws.SetLogger(log.WithField("logger", "websocket"))
+	// hyde/lab: OTLP trace export (push) to the OTel Collector -> Jaeger
+	stopTracing := startTracing()
+	defer stopTracing()
 	// hyde/lab: OTel/Prometheus registry metrics on /metrics
 	startMetrics()
 	// Run central system

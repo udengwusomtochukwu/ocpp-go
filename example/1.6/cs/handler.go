@@ -77,7 +77,7 @@ func (handler *CentralSystemHandler) OnAuthorize(chargePointId string, request *
 
 func (handler *CentralSystemHandler) OnBootNotification(chargePointId string, request *core.BootNotificationRequest) (confirmation *core.BootNotificationConfirmation, err error) {
 	logDefault(chargePointId, request.GetFeatureName()).Infof("boot confirmed")
-	return core.NewBootNotificationConfirmation(types.NewDateTime(time.Now()), defaultHeartbeatInterval, core.RegistrationStatusAccepted), nil
+	return core.NewBootNotificationConfirmation(types.NewDateTime(time.Now()), heartbeatInterval, core.RegistrationStatusAccepted), nil
 }
 
 func (handler *CentralSystemHandler) OnDataTransfer(chargePointId string, request *core.DataTransferRequest) (confirmation *core.DataTransferConfirmation, err error) {

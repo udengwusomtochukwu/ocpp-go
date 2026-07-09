@@ -1,0 +1,47 @@
+# hyde/lab — isolated ocpp-go 1.6 evaluation lab.
+# Self-contained loop: the charge-point sim auto-dials the central system
+# over the internal `sim` network. No DB, no external dependencies.
+#
+# Local:   docker compose -f deploy/ocpp-lab/docker-compose.yml up --build
+# Dokploy: deployed as a Compose service; a domain is attached to the
+#          central-system service on port 8887 (TLS terminated at Traefik).
+#
+# NOTE: build contexts point at the repo root (../..) because the Dockerfiles
+# do `COPY . .` + `go mod download` against the whole module. Upstream's
+# example/1.6/docker-compose.yml uses stale relative paths — this one is fixed.
+services:
+  central-system:
+    build:
+      context: ../..
+      dockerfile: example/1.6/cs/Dockerfile
+    image: hyde/ocpp1.6-central-system:lab
+    container_name: ocpp-lab-cs
+    environment:
+      - SERVER_LISTEN_PORT=8887
+      - LOG_LEVEL=info
+      - HEARTBEAT_INTERVAL=60
+    ports:
+      - "8887:8887"
+    networks:
+      - sim
+    tty: true
+
+  charge-point:
+    depends_on:
+      central-system:
+        condition: service_started
+    build:
+      context: ../..
+      dockerfile: example/1.6/cp/Dockerfile
+    image: hyde/ocpp1.6-charge-point:lab
+    container_name: ocpp-lab-cp
+    environment:
+      - CLIENT_ID=chargePointSim
+      - CENTRAL_SYSTEM_URL=ws://central-system:8887
+    networks:
+      - sim
+    tty: true
+
+networks:
+  sim:
+    driver: bridge

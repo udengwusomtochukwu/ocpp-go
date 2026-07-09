@@ -21,17 +21,27 @@ import (
 )
 
 const (
-	defaultListenPort          = 8887
-	defaultHeartbeatInterval   = 600
+	defaultListenPort = 8887
+	// hyde/lab: lowered from upstream's 600 so a Cloudflare-proxied WS stays
+	// under the ~100s idle cut-off. Override with HEARTBEAT_INTERVAL.
+	defaultHeartbeatInterval   = 60
 	envVarServerPort           = "SERVER_LISTEN_PORT"
 	envVarTls                  = "TLS_ENABLED"
 	envVarCaCertificate        = "CA_CERTIFICATE_PATH"
 	envVarServerCertificate    = "SERVER_CERTIFICATE_PATH"
 	envVarServerCertificateKey = "SERVER_CERTIFICATE_KEY_PATH"
+	// hyde/lab additions
+	envVarLogLevel          = "LOG_LEVEL"
+	envVarHeartbeatInterval = "HEARTBEAT_INTERVAL"
 )
 
 var log *logrus.Logger
 var centralSystem ocpp16.CentralSystem
+
+// heartbeatInterval is handed to charge points in the BootNotification
+// response (seconds). hyde/lab: env-driven via HEARTBEAT_INTERVAL,
+// defaulting to defaultHeartbeatInterval.
+var heartbeatInterval = defaultHeartbeatInterval
 
 func setupCentralSystem() ocpp16.CentralSystem {
 	return ocpp16.NewCentralSystem(nil, nil)
@@ -242,6 +252,21 @@ func main() {
 func init() {
 	log = logrus.New()
 	log.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
-	// Set this to DebugLevel if you want to retrieve verbose logs from the ocppj and websocket layers
-	log.SetLevel(logrus.ErrorLevel)
+	// hyde/lab: log level is env-driven (LOG_LEVEL). Default to info so the
+	// OCPP conversation is visible; set LOG_LEVEL=debug for ocppj/ws
+	// frame-level logs.
+	level := logrus.InfoLevel
+	if lvl, ok := os.LookupEnv(envVarLogLevel); ok {
+		if parsed, err := logrus.ParseLevel(lvl); err == nil {
+			level = parsed
+		}
+	}
+	log.SetLevel(level)
+	// hyde/lab: heartbeat interval handed to charge points is env-driven
+	// (HEARTBEAT_INTERVAL, seconds) so a CF-proxied WS stays alive.
+	if hb, ok := os.LookupEnv(envVarHeartbeatInterval); ok {
+		if parsed, err := strconv.Atoi(hb); err == nil && parsed > 0 {
+			heartbeatInterval = parsed
+		}
+	}
 }

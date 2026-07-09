@@ -20,10 +20,10 @@ services:
       - SERVER_LISTEN_PORT=8887
       - LOG_LEVEL=info
       - HEARTBEAT_INTERVAL=60
-    ports:
-      - "8887:8887"
+    # No host port publish: Traefik (on dokploy-network) is the ingress.
     networks:
       - sim
+      - dokploy-network
     tty: true
 
   charge-point:
@@ -45,3 +45,7 @@ services:
 networks:
   sim:
     driver: bridge
+  # Provided by Dokploy; Traefik lives here and routes the attached domain to
+  # central-system:8887. For a LOCAL run first: docker network create dokploy-network
+  dokploy-network:
+    external: true

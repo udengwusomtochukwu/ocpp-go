@@ -7,3 +7,14 @@ datasources:
     # QUERY_BASE_PATH=/jaeger prefixes the query API too.
     url: http://jaeger:16686/jaeger
     editable: false
+    jsonData:
+      # trace -> logs: from a span, jump to Loki filtered by that trace's id.
+      # ($$ escapes $ so Grafana provisioning keeps the ${__trace...} template.)
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: '-1h'
+        spanEndTimeShift: '1h'
+        filterByTraceID: false
+        filterBySpanID: false
+        customQuery: true
+        query: '{service_name="ocpp-central-system"} | trace_id="$${__trace.traceId}"'

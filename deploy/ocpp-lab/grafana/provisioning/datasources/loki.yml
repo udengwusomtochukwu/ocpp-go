@@ -6,3 +6,13 @@ datasources:
     access: proxy
     url: http://loki:3100
     editable: false
+    jsonData:
+      # logs -> trace: turn the trace_id (structured metadata from OTLP) on a
+      # log line into a clickable link into Jaeger. ($$ escapes $ for provisioning.)
+      derivedFields:
+        - name: TraceID
+          matcherType: label
+          matcherRegex: trace_id
+          datasourceUid: jaeger
+          url: '$${__value.raw}'
+          urlDisplayLabel: 'View trace'

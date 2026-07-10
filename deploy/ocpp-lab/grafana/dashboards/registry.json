@@ -4,7 +4,7 @@
   "tags": ["ocpp", "lab"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "5s",
   "time": { "from": "now-30m", "to": "now" },
   "templating": { "list": [] },
@@ -71,6 +71,25 @@
       "targets": [
         { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(ocpp_connections_opened_total[1m]))", "legendFormat": "opened/s" },
         { "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(ocpp_connections_closed_total[1m]))", "legendFormat": "closed/s" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "logs",
+      "title": "CS logs (Loki) — click a line's TraceID to jump to the trace",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 11, "w": 24, "x": 0, "y": 16 },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        { "refId": "A", "datasource": { "type": "loki", "uid": "loki" }, "expr": "{service_name=\"ocpp-central-system\"}" }
       ]
     }
   ]

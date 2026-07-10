@@ -71,16 +71,16 @@ type CentralSystemHandler struct {
 // ------------- Core profile callbacks -------------
 
 func (handler *CentralSystemHandler) OnAuthorize(chargePointId string, request *core.AuthorizeRequest) (confirmation *core.AuthorizeConfirmation, err error) {
-	_, span := startCPSpan(chargePointId, request.GetFeatureName())
+	ctx, span := startCPSpan(chargePointId, request.GetFeatureName())
 	defer span.End()
-	logDefault(chargePointId, request.GetFeatureName()).Infof("client authorized")
+	logDefault(chargePointId, request.GetFeatureName()).WithContext(ctx).Infof("client authorized")
 	return core.NewAuthorizationConfirmation(types.NewIdTagInfo(types.AuthorizationStatusAccepted)), nil
 }
 
 func (handler *CentralSystemHandler) OnBootNotification(chargePointId string, request *core.BootNotificationRequest) (confirmation *core.BootNotificationConfirmation, err error) {
-	_, span := startCPSpan(chargePointId, request.GetFeatureName())
+	ctx, span := startCPSpan(chargePointId, request.GetFeatureName())
 	defer span.End()
-	logDefault(chargePointId, request.GetFeatureName()).Infof("boot confirmed")
+	logDefault(chargePointId, request.GetFeatureName()).WithContext(ctx).Infof("boot confirmed")
 	return core.NewBootNotificationConfirmation(types.NewDateTime(time.Now()), heartbeatInterval, core.RegistrationStatusAccepted), nil
 }
 

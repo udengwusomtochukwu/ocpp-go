@@ -15,6 +15,8 @@ exporters:
     endpoint: jaeger:4317
     tls:
       insecure: true
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
   debug:
     verbosity: normal
 
@@ -24,3 +26,7 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [otlp/jaeger, debug]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/loki, debug]

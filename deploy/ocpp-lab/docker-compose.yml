@@ -82,6 +82,8 @@ services:
     image: otel/opentelemetry-collector:0.109.0
     container_name: ocpp-lab-otelcol
     command: ["--config=/etc/otelcol/config.yaml"]
+    environment:
+      - COLCFG=logs-v1   # bump to force a recreate when config.yaml changes (bind-mount edits alone don't)
     volumes:
       - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
     networks:
@@ -96,6 +98,16 @@ services:
     networks:
       - sim
       - dokploy-network
+
+  # log store: native OTLP ingest, queried by Grafana's Loki datasource
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: ocpp-lab-loki
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml:ro
+    networks:
+      - sim
 
 networks:
   sim:

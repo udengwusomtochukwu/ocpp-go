@@ -191,17 +191,31 @@ paths:
     post:
       tags: [commands]
       summary: RemoteStopTransaction
+      description: Omit transactionId to stop the charger's single active transaction.
       security: [{ internalToken: [] }]
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               type: object
-              required: [transactionId]
               properties:
-                transactionId: { type: integer }
+                transactionId: { type: integer, description: "Optional — resolves to the active transaction when omitted" }
+      responses:
+        "200": { description: Confirmation, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
+  /chargers/{id}/commands/unlock-connector:
+    post:
+      tags: [commands]
+      summary: UnlockConnector
+      security: [{ internalToken: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                connectorId: { type: integer, default: 1 }
       responses:
         "200": { description: Confirmation, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
   /chargers/{id}/commands/trigger:

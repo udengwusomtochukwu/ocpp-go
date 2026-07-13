@@ -323,6 +323,23 @@ func (handler *CentralSystemHandler) snapshotOne(id string) (restCharger, bool) 
 	return project(id, st), true
 }
 
+// activeTransaction returns the single in-progress transaction id for a
+// charge point, if any connector has one.
+func (handler *CentralSystemHandler) activeTransaction(id string) (int, bool) {
+	handler.mu.RLock()
+	defer handler.mu.RUnlock()
+	st, ok := handler.chargePoints[id]
+	if !ok {
+		return 0, false
+	}
+	for _, ci := range st.connectors {
+		if ci.hasTransactionInProgress() {
+			return ci.currentTransaction, true
+		}
+	}
+	return 0, false
+}
+
 // isOnline reports whether the charge point currently holds a live socket.
 func (handler *CentralSystemHandler) isOnline(id string) bool {
 	handler.mu.RLock()

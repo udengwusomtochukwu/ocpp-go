@@ -223,8 +223,14 @@ func handleCommand(w http.ResponseWriter, r *http.Request, h *CentralSystemHandl
 		feature = core.RemoteStopTransactionFeatureName
 		txID := num("transactionId", -1)
 		if txID < 0 {
-			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "transactionId required"})
-			return
+			// UI ergonomics: omitted transactionId resolves to the charger's
+			// single active transaction (dashboards don't track OCPP tx ids).
+			if active, ok := h.activeTransaction(chargerID); ok {
+				txID = active
+			} else {
+				writeJSON(w, http.StatusBadRequest, map[string]any{"error": "transactionId required (no active transaction found)"})
+				return
+			}
 		}
 		sendErr = centralSystem.RemoteStopTransaction(chargerID, func(c *core.RemoteStopTransactionConfirmation, err error) {
 			s := ""
@@ -233,6 +239,16 @@ func handleCommand(w http.ResponseWriter, r *http.Request, h *CentralSystemHandl
 			}
 			done <- confirmOutcome(s, nil, err, c == nil)
 		}, txID)
+	case "unlock-connector":
+		feature = core.UnlockConnectorFeatureName
+		connector := num("connectorId", 1)
+		sendErr = centralSystem.UnlockConnector(chargerID, func(c *core.UnlockConnectorConfirmation, err error) {
+			s := ""
+			if c != nil {
+				s = string(c.Status)
+			}
+			done <- confirmOutcome(s, map[string]any{"connectorId": connector}, err, c == nil)
+		}, connector)
 	case "trigger":
 		feature = remotetrigger.TriggerMessageFeatureName
 		requested := str("requested", "StatusNotification")
@@ -350,7 +366,7 @@ func handleCommand(w http.ResponseWriter, r *http.Request, h *CentralSystemHandl
 		}, connector, duration)
 	default:
 		writeJSON(w, http.StatusNotFound, map[string]any{"error": "unknown command", "commands": []string{
-			"remote-start", "remote-stop", "trigger", "reset", "get-configuration",
+			"remote-start", "remote-stop", "trigger", "reset", "unlock-connector", "get-configuration",
 			"change-configuration", "set-charging-profile", "clear-charging-profile", "get-composite-schedule",
 		}})
 		return

@@ -147,6 +147,7 @@ func (handler *CentralSystemHandler) OnMeterValues(chargePointId string, request
 		st.pushTrace("in", request.GetFeatureName(),
 			fmt.Sprintf("connector %d · %s %s", request.ConnectorId, sampleVal, sampleUnit))
 	})
+	recordMeterValues(request) // power / energy-register / SoC gauges by measurand
 	bus.Publish(Event{Type: "meter", Charger: chargePointId, Data: map[string]any{
 		"connectorId": request.ConnectorId, "value": sampleVal, "unit": sampleUnit,
 	}})

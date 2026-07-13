@@ -7,3 +7,8 @@ datasources:
     url: http://prometheus:9090
     isDefault: true
     editable: false
+    jsonData:
+      # Must match prometheus.yml global.scrape_interval — $__rate_interval
+      # resolves against this (Grafana assumes 15s when unset, inflating
+      # every rate window ~3x and re-smearing the bar panels).
+      timeInterval: 5s

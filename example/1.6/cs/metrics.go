@@ -4,12 +4,18 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
+	"sync/atomic"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+
+	"github.com/lorenzodonini/ocpp-go/ocpp1.6/core"
+	"github.com/lorenzodonini/ocpp-go/ocpp1.6/types"
 )
 
 // hyde/lab: registry-health instrumentation for the OCPP connection lifecycle
@@ -34,6 +40,14 @@ var (
 	mEnergyWh metric.Int64Counter // ocpp_energy_wh_total
 	mFaults   metric.Int64Counter // ocpp_faults_total{error_code}
 	mCommands metric.Int64Counter // ocpp_command_results_total{status}
+	// charging-telemetry gauges (set-style), fed by MeterValues samples in
+	// recordMeterValues. Same cardinality discipline: charge-point id stays
+	// OFF the label set, so each gauge is fleet-wide "most recent report" —
+	// with several chargers charging at once the newest sample wins.
+	mPower     metric.Float64Gauge // ocpp_power_w        <- Power.Active.Import
+	mEnergyReg metric.Float64Gauge // ocpp_energy_register_wh{direction} <- Energy.Active.*.Register
+	mSoC       metric.Float64Gauge // ocpp_soc_percent    <- SoC
+	powerSeen  atomic.Bool         // true once any Power.Active.Import sample arrived
 )
 
 // startMetrics wires an OTel meter to a Prometheus exporter and serves
@@ -65,6 +79,12 @@ func startMetrics() {
 		metric.WithDescription("StatusNotifications carrying an errorCode"))
 	mCommands, _ = meter.Int64Counter("ocpp.command.results",
 		metric.WithDescription("Remote command confirmations by status"))
+	mPower, _ = meter.Float64Gauge("ocpp.power.w",
+		metric.WithDescription("Instantaneous charging power (W) from Power.Active.Import meter samples"))
+	mEnergyReg, _ = meter.Float64Gauge("ocpp.energy.register.wh",
+		metric.WithDescription("Energy register reading (Wh) from Energy.Active.{Import,Export}.Register meter samples, by direction"))
+	mSoC, _ = meter.Float64Gauge("ocpp.soc.percent",
+		metric.WithDescription("EV state of charge (percent) from SoC meter samples"))
 
 	port := defaultMetricsPort
 	if p, ok := os.LookupEnv(envVarMetricsPort); ok && p != "" {
@@ -96,6 +116,14 @@ func recordEvent(ev Event) {
 		if wh, ok := ev.Data["energyWh"].(int); ok && wh > 0 {
 			mEnergyWh.Add(ctx, int64(wh))
 		}
+		// Chargers stop streaming MeterValues after StopTransaction, which
+		// would freeze the power gauge at its last in-charge value. Zero it —
+		// but only if power was ever reported, so a charger that never sends
+		// Power.Active.Import keeps the gauge honestly empty (no series)
+		// instead of a fabricated 0.
+		if powerSeen.Load() {
+			mPower.Record(ctx, 0)
+		}
 	case "status":
 		if code, _ := ev.Data["errorCode"].(string); code != "" && code != "NoError" {
 			mFaults.Add(ctx, 1, metric.WithAttributes(attribute.String("error_code", code)))
@@ -107,6 +135,52 @@ func recordEvent(ev Event) {
 		}
 		mCommands.Add(ctx, 1, metric.WithAttributes(attribute.String("status", status)))
 	}
+}
+
+// recordMeterValues extracts charging telemetry from a MeterValues.req and
+// sets the matching gauges — the sampled-data counterpart to recordEvent.
+// Called from OnMeterValues. Per OCPP 1.6, a SampledValue with no Measurand
+// means Energy.Active.Import.Register. Phase-qualified samples (L1/L2/…) are
+// skipped so per-phase readings don't overwrite the aggregate value.
+func recordMeterValues(req *core.MeterValuesRequest) {
+	if mPower == nil {
+		return
+	}
+	ctx := context.Background()
+	for _, mv := range req.MeterValue {
+		for _, sv := range mv.SampledValue {
+			if sv.Phase != "" {
+				continue
+			}
+			v, err := strconv.ParseFloat(strings.TrimSpace(sv.Value), 64)
+			if err != nil {
+				continue // SignedData blobs etc. — not chartable
+			}
+			switch sv.Measurand {
+			case types.MeasurandPowerActiveImport:
+				powerSeen.Store(true)
+				mPower.Record(ctx, scaleToBase(v, sv.Unit))
+			case types.MeasurandEnergyActiveImportRegister, "":
+				mEnergyReg.Record(ctx, scaleToBase(v, sv.Unit),
+					metric.WithAttributes(attribute.String("direction", "import")))
+			case types.MeasurandEnergyActiveExportRegister:
+				mEnergyReg.Record(ctx, scaleToBase(v, sv.Unit),
+					metric.WithAttributes(attribute.String("direction", "export")))
+			case types.MeasurandSoC:
+				mSoC.Record(ctx, v)
+			}
+		}
+	}
+}
+
+// scaleToBase normalizes kW→W / kWh→Wh. An omitted unit already is the base
+// unit per OCPP 1.6 (Wh for energy registers, W for power).
+func scaleToBase(v float64, unit types.UnitOfMeasure) float64 {
+	switch unit {
+	case types.UnitOfMeasureKW, types.UnitOfMeasureKWh:
+		return v * 1000
+	}
+	return v
 }
 
 // onConnect / onDisconnect are called from the CS connection-lifecycle

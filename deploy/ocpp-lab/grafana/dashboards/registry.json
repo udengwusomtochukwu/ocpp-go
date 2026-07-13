@@ -4,93 +4,71 @@
   "tags": ["ocpp", "lab"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "5s",
   "time": { "from": "now-30m", "to": "now" },
   "templating": { "list": [] },
   "annotations": { "list": [] },
   "panels": [
-    {
-      "id": 1,
-      "type": "stat",
-      "title": "Chargers connected (now)",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "none",
-          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
-      },
+    { "id": 10, "type": "row", "title": "Fleet", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 } },
+    { "id": 1, "type": "stat", "title": "Chargers connected", "datasource": { "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 4, "x": 0, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "none", "thresholds": { "mode": "absolute", "steps": [ { "color": "orange", "value": null }, { "color": "green", "value": 1 } ] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [ { "refId": "A", "expr": "sum(ocpp_chargers_connected) or vector(0)" } ] },
+    { "id": 2, "type": "stat", "title": "Sessions started (30m)", "datasource": { "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 4, "x": 4, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "none", "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null } ] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [ { "refId": "A", "expr": "sum(increase(ocpp_transactions_started_total[30m])) or vector(0)" } ] },
+    { "id": 3, "type": "stat", "title": "Energy delivered (30m)", "datasource": { "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 4, "x": 8, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "watth", "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [ { "refId": "A", "expr": "sum(increase(ocpp_energy_wh_total[30m])) or vector(0)" } ] },
+    { "id": 4, "type": "stat", "title": "Faults (30m)", "datasource": { "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 4, "x": 12, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "none", "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [ { "refId": "A", "expr": "sum(increase(ocpp_faults_total[30m])) or vector(0)" } ] },
+    { "id": 5, "type": "stat", "title": "CS scrape up", "datasource": { "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "none", "mappings": [ { "type": "value", "options": { "1": { "text": "UP", "color": "green" }, "0": { "text": "DOWN", "color": "red" } } } ], "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } }, "overrides": [] },
+      "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [ { "refId": "A", "expr": "up{job=\"ocpp-central-system\"}" } ] },
+    { "id": 6, "type": "timeseries", "title": "Chargers connected over time", "datasource": { "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "lineInterpolation": "stepAfter", "fillOpacity": 20, "lineWidth": 2 }, "min": 0 }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "sum(ocpp_chargers_connected) or vector(0)", "legendFormat": "connected" } ] },
+    { "id": 7, "type": "timeseries", "title": "Connections + sessions per minute", "datasource": { "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 }, "unit": "opm", "min": 0 }, "overrides": [] },
       "targets": [
-        { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(ocpp_chargers_connected)" }
-      ]
-    },
-    {
-      "id": 2,
-      "type": "timeseries",
-      "title": "Chargers connected over time",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 0 },
-      "fieldConfig": {
-        "defaults": {
-          "custom": { "drawStyle": "line", "lineInterpolation": "stepAfter", "fillOpacity": 20, "lineWidth": 2 },
-          "unit": "none",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
-      "targets": [
-        { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(ocpp_chargers_connected)", "legendFormat": "connected" }
-      ]
-    },
-    {
-      "id": 3,
-      "type": "timeseries",
-      "title": "Connection open / close rate",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
-      "fieldConfig": {
-        "defaults": {
-          "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 },
-          "unit": "ops",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
-      "targets": [
-        { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(ocpp_connections_opened_total[1m]))", "legendFormat": "opened/s" },
-        { "refId": "B", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(ocpp_connections_closed_total[1m]))", "legendFormat": "closed/s" }
-      ]
-    },
-    {
-      "id": 4,
-      "type": "logs",
-      "title": "CS logs (Loki) — click a line's TraceID to jump to the trace",
-      "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 11, "w": 24, "x": 0, "y": 16 },
-      "options": {
-        "showTime": true,
-        "showLabels": false,
-        "wrapLogMessage": true,
-        "prettifyLogMessage": false,
-        "enableLogDetails": true,
-        "dedupStrategy": "none",
-        "sortOrder": "Descending"
-      },
-      "targets": [
-        { "refId": "A", "datasource": { "type": "loki", "uid": "loki" }, "expr": "{service_name=\"ocpp-central-system\"}" }
-      ]
-    }
+        { "refId": "A", "expr": "sum(rate(ocpp_connections_opened_total[5m]))*60", "legendFormat": "conn opened/min" },
+        { "refId": "B", "expr": "sum(rate(ocpp_connections_closed_total[5m]))*60", "legendFormat": "conn closed/min" },
+        { "refId": "C", "expr": "sum(rate(ocpp_transactions_started_total[5m]))*60", "legendFormat": "tx started/min" },
+        { "refId": "D", "expr": "sum(rate(ocpp_transactions_stopped_total[5m]))*60", "legendFormat": "tx stopped/min" } ] },
+    { "id": 11, "type": "row", "title": "Protocol activity", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 } },
+    { "id": 8, "type": "timeseries", "title": "Registry events by type (per min)", "datasource": { "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } }, "unit": "opm", "min": 0 }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "sum by (type) (rate(ocpp_events_total[5m]))*60", "legendFormat": "{{type}}" } ] },
+    { "id": 9, "type": "timeseries", "title": "Command results by status (per min)", "datasource": { "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 17 },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } }, "unit": "opm", "min": 0 }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "sum by (status) (rate(ocpp_command_results_total[5m]))*60", "legendFormat": "{{status}}" } ] },
+    { "id": 12, "type": "timeseries", "title": "Faults by error code (per min)", "datasource": { "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 25 },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } }, "unit": "opm", "min": 0 }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "sum by (error_code) (rate(ocpp_faults_total[5m]))*60", "legendFormat": "{{error_code}}" } ] },
+    { "id": 13, "type": "timeseries", "title": "Energy rate", "datasource": { "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 25 },
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 25, "lineWidth": 2 }, "unit": "watt", "min": 0 }, "overrides": [] },
+      "targets": [ { "refId": "A", "expr": "sum(rate(ocpp_energy_wh_total[5m]))*3600", "legendFormat": "avg delivery W" } ] },
+    { "id": 14, "type": "row", "title": "Logs", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 } },
+    { "id": 15, "type": "logs", "title": "CS logs (Loki) — click a line's TraceID to jump to the trace", "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 11, "w": 24, "x": 0, "y": 34 },
+      "options": { "showTime": true, "wrapLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending" },
+      "targets": [ { "refId": "A", "datasource": { "type": "loki", "uid": "loki" }, "expr": "{service_name=\"ocpp-central-system\"}" } ] }
   ]
 }

@@ -34,6 +34,7 @@ func (b *eventBus) Publish(ev Event) {
 	if ev.Time.IsZero() {
 		ev.Time = time.Now().UTC()
 	}
+	recordEvent(ev) // one hook: every event also feeds the metrics plane
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.ring = append(b.ring, ev)

@@ -1,0 +1,78 @@
+# hyde/lab: provisioned alert rules for the OCPP lab (folder "OCPP Lab").
+# Fire in Grafana Alerting UI (default contact point; add Slack/email there).
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: ocpp-lab
+    folder: OCPP Lab
+    interval: 1m
+    rules:
+      - uid: ocpp-cs-down
+        title: Central system down (scrape failing)
+        condition: C
+        for: 2m
+        noDataState: Alerting
+        execErrState: Error
+        labels: { severity: critical }
+        annotations:
+          summary: ocpp-central-system /metrics is not scrapeable — CS likely down.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'up{job="ocpp-central-system"}', instant: true }
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+      - uid: ocpp-fault-spike
+        title: Charger fault reported
+        condition: C
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations:
+          summary: One or more StatusNotifications carried an errorCode in the last 5m.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'sum(increase(ocpp_faults_total[5m])) or vector(0)', instant: true }
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+      - uid: ocpp-conn-flapping
+        title: Connection flapping (churn > 10/5m)
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations:
+          summary: Charge-point sockets are churning — check network/CF idle cuts or a reboot loop.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'sum(increase(ocpp_connections_closed_total[5m])) or vector(0)', instant: true }
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [10] }

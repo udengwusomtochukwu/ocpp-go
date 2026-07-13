@@ -1,0 +1,321 @@
+openapi: 3.0.3
+info:
+  title: HYDE ocpp-lab API
+  version: 0.1.0
+  description: |
+    Operator/system-facing REST + SSE surface of the isolated **ocpp-go lab**
+    (hydecharge epic #68 / plan 26 evaluation). Charger-facing OCPP 1.6-J runs
+    on `wss://ocpp-lab.hydecharge.com/{chargePointId}`; this API is everything
+    northbound of it: the connection registry, remote commands, the SmartCharging
+    (EMS) seam, and a live Server-Sent-Events stream.
+
+    The `Charger` schema deliberately mirrors the EVCMS dashboard contract
+    (`web/dashboard/lib/ocpp.ts`) — point `OCPP_API_BASE` at this server and the
+    dashboard's `/chargers` screens go live.
+servers:
+  - url: https://ocpp-lab.hydecharge.com/api
+  - url: http://localhost:8080/api
+tags:
+  - name: registry
+  - name: commands
+  - name: smart-charging
+  - name: streams
+components:
+  securitySchemes:
+    internalToken:
+      type: apiKey
+      in: header
+      name: X-Internal-Token
+      description: Only enforced when the server runs with API_TOKEN set (lab default = open).
+  schemas:
+    Connector:
+      type: object
+      properties:
+        id: { type: string }
+        standard: { type: string }
+        format: { type: string }
+        powerType: { type: string }
+        maxKw: { type: number }
+        status: { type: string, description: "Available / Preparing / Charging / Faulted / …" }
+        tariffId: { type: string, nullable: true }
+    Evse:
+      type: object
+      properties:
+        uid: { type: string }
+        evseId: { type: string }
+        status: { type: string }
+        connectors: { type: array, items: { $ref: "#/components/schemas/Connector" } }
+    ConfigKey:
+      type: object
+      properties:
+        key: { type: string }
+        value: { type: string }
+        readonly: { type: boolean }
+    TraceEntry:
+      type: object
+      properties:
+        time: { type: string, example: "21:56:04" }
+        dir: { type: string, enum: [in, out] }
+        message: { type: string, example: "StatusNotification" }
+        detail: { type: string }
+    Fault:
+      type: object
+      description: From OCPP StatusNotification — errorCode enum + free vendor fields.
+      properties:
+        time: { type: string, example: "10 Jul 21:57" }
+        code: { type: string, example: "GroundFailure" }
+        info: { type: string, example: "Connector 1 residual current trip [vendor 0119F1]" }
+        severity: { type: string, enum: [info, warning, critical] }
+        resolved: { type: boolean }
+    Charger:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        ocppId: { type: string }
+        serial: { type: string }
+        vendor: { type: string }
+        model: { type: string }
+        firmware: { type: string }
+        ocpp: { type: string, example: "OCPP 1.6J" }
+        capabilities: { type: array, items: { type: string } }
+        status: { type: string, enum: [online, charging, offline, faulted] }
+        endpoint: { type: string, example: "wss://ocpp-lab.hydecharge.com/CP42" }
+        lastHeartbeat: { type: string, example: "4s ago" }
+        lastBoot: { type: string, example: "13 Jul 14:02" }
+        heartbeatInterval: { type: integer }
+        signalDbm: { type: integer }
+        locationId: { type: string, nullable: true }
+        locationName: { type: string, nullable: true }
+        evses: { type: array, items: { $ref: "#/components/schemas/Evse" } }
+        config: { type: array, items: { $ref: "#/components/schemas/ConfigKey" } }
+        trace: { type: array, items: { $ref: "#/components/schemas/TraceEntry" } }
+        firmwareStatus: { type: string }
+        lastDiagnostics: { type: string }
+        downtime: { type: array, items: { type: object } }
+        faults: { type: array, items: { $ref: "#/components/schemas/Fault" } }
+        tickets: { type: array, items: { type: object } }
+        stats:
+          type: object
+          properties:
+            uptimePct: { type: number }
+            availabilityPct: { type: number }
+            utilizationPct: { type: number }
+            sessions30d: { type: integer }
+            energy30dKwh: { type: number }
+            revenue30d: { type: number }
+            faults30d: { type: integer }
+            avgSessionKwh: { type: number }
+    CommandResult:
+      type: object
+      properties:
+        charger: { type: string }
+        command: { type: string, example: "RemoteStartTransaction" }
+        status: { type: string, example: "Accepted" }
+        detail: { type: object, nullable: true }
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+  responses:
+    CommandResponses:
+      description: Charge point confirmation (synchronous, ≤15s).
+paths:
+  /health:
+    get:
+      tags: [registry]
+      summary: Liveness
+      responses:
+        "200": { description: OK }
+  /chargers:
+    get:
+      tags: [registry]
+      summary: List all known charge points (live registry projection)
+      description: State survives disconnects — offline chargers stay listed with history.
+      responses:
+        "200":
+          description: Registry snapshot
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Charger" } }
+  /chargers/{id}:
+    get:
+      tags: [registry]
+      summary: One charge point
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Charger
+          content: { application/json: { schema: { $ref: "#/components/schemas/Charger" } } }
+        "404":
+          description: Unknown charger
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+  /events:
+    get:
+      tags: [streams]
+      summary: Live event stream (Server-Sent Events)
+      description: |
+        `text/event-stream`. Event types: `charger.connected`, `charger.disconnected`,
+        `boot`, `status` (carries errorCode / vendorErrorCode / info), `tx.started`,
+        `tx.stopped`, `meter`, `heartbeat`, `command.result`. Each frame's `data:` is the
+        JSON `{type, charger, time, data}` envelope. Keep-alive comment every 25s.
+        Consume with `new EventSource(...)`.
+      parameters:
+        - { name: replay, in: query, required: false, schema: { type: integer }, description: "Replay the last N events on connect" }
+        - { name: charger, in: query, required: false, schema: { type: string }, description: "Only events for this charge point" }
+      responses:
+        "200": { description: "SSE stream (long-lived)" }
+  /chargers/{id}/commands/remote-start:
+    post:
+      tags: [commands]
+      summary: RemoteStartTransaction
+      security: [{ internalToken: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                connectorId: { type: integer, description: "Omit for charger's choice" }
+                idTag: { type: string, default: "HYDE-LAB" }
+      responses:
+        "200": { description: Confirmation, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
+        "409": { description: Charger offline }
+        "504": { description: No confirmation within 15s }
+  /chargers/{id}/commands/remote-stop:
+    post:
+      tags: [commands]
+      summary: RemoteStopTransaction
+      security: [{ internalToken: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transactionId]
+              properties:
+                transactionId: { type: integer }
+      responses:
+        "200": { description: Confirmation, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
+  /chargers/{id}/commands/trigger:
+    post:
+      tags: [commands]
+      summary: TriggerMessage — ask the charger to send a message now
+      security: [{ internalToken: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                requested:
+                  type: string
+                  default: StatusNotification
+                  enum: [BootNotification, DiagnosticsStatusNotification, FirmwareStatusNotification, Heartbeat, MeterValues, StatusNotification]
+      responses:
+        "200": { description: Confirmation, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
+  /chargers/{id}/commands/reset:
+    post:
+      tags: [commands]
+      summary: Reset (Soft / Hard)
+      security: [{ internalToken: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type: { type: string, enum: [Soft, Hard], default: Soft }
+      responses:
+        "200": { description: Confirmation, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
+  /chargers/{id}/commands/get-configuration:
+    post:
+      tags: [commands]
+      summary: GetConfiguration (also refreshes the registry's config cache)
+      security: [{ internalToken: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                keys: { type: array, items: { type: string }, description: "Omit for all keys" }
+      responses:
+        "200": { description: Keys, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
+  /chargers/{id}/commands/change-configuration:
+    post:
+      tags: [commands]
+      summary: ChangeConfiguration
+      security: [{ internalToken: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, value]
+              properties:
+                key: { type: string, example: "MeterValueSampleInterval" }
+                value: { type: string, example: "10" }
+      responses:
+        "200": { description: Confirmation, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
+  /chargers/{id}/commands/set-charging-profile:
+    post:
+      tags: [smart-charging]
+      summary: SetChargingProfile — the EMS seam (plan 33)
+      description: |
+        Caps a connector (or the whole charge point with `connectorId: 0`,
+        purpose ChargePointMaxProfile) at `limit` in `unit` W or A. An EMS drives
+        this endpoint + reads `/events` — no other channel needed.
+      security: [{ internalToken: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [limit]
+              properties:
+                connectorId: { type: integer, default: 0 }
+                limit: { type: number, example: 11000 }
+                unit: { type: string, enum: [W, A], default: W }
+                profileId: { type: integer, default: 1 }
+                stackLevel: { type: integer, default: 0 }
+      responses:
+        "200": { description: Confirmation, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
+  /chargers/{id}/commands/clear-charging-profile:
+    post:
+      tags: [smart-charging]
+      summary: ClearChargingProfile
+      security: [{ internalToken: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Confirmation, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
+  /chargers/{id}/commands/get-composite-schedule:
+    post:
+      tags: [smart-charging]
+      summary: GetCompositeSchedule — what limit the charger actually applies
+      security: [{ internalToken: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                connectorId: { type: integer, default: 0 }
+                durationSeconds: { type: integer, default: 3600 }
+      responses:
+        "200": { description: Schedule, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }

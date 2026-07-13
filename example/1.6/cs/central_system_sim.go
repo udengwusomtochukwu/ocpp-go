@@ -231,17 +231,33 @@ func main() {
 	centralSystem.SetSecureFirmwareHandler(handler)
 	centralSystem.SetLogHandler(handler)
 
-	// Add handlers for dis/connection of charge points
+	// Add handlers for dis/connection of charge points.
+	// hyde/lab: state is kept across disconnects (online flag flips) so the
+	// REST registry can serve offline chargers + their history.
 	centralSystem.SetNewChargePointHandler(func(chargePoint ocpp16.ChargePointConnection) {
-		handler.chargePoints[chargePoint.ID()] = &ChargePointState{connectors: map[int]*ConnectorInfo{}, transactions: map[int]*TransactionInfo{}}
+		id := chargePoint.ID()
+		handler.update(id, func(st *ChargePointState) {
+			st.online = true
+			st.connectedAt = time.Now()
+		})
 		onConnect() // hyde/lab: registry metrics
-		log.WithField("client", chargePoint.ID()).Info("new charge point connected")
-		go exampleRoutine(chargePoint.ID(), handler)
+		bus.Publish(Event{Type: "charger.connected", Charger: id})
+		log.WithField("client", id).Info("new charge point connected")
+		go exampleRoutine(id, handler)
+		// Populate the config cache shortly after boot settles.
+		go func() {
+			time.Sleep(4 * time.Second)
+			if _, err := syncGetConfiguration(id, nil, handler); err != nil {
+				log.WithField("client", id).Debugf("config prefetch failed: %v", err)
+			}
+		}()
 	})
 	centralSystem.SetChargePointDisconnectedHandler(func(chargePoint ocpp16.ChargePointConnection) {
+		id := chargePoint.ID()
+		handler.update(id, func(st *ChargePointState) { st.online = false })
 		onDisconnect() // hyde/lab: registry metrics
-		log.WithField("client", chargePoint.ID()).Info("charge point disconnected")
-		delete(handler.chargePoints, chargePoint.ID())
+		bus.Publish(Event{Type: "charger.disconnected", Charger: id})
+		log.WithField("client", id).Info("charge point disconnected")
 	})
 	ocppj.SetLogger(log.WithField("logger", "ocppj"))
 	ws.SetLogger(log.WithField("logger", "websocket"))
@@ -253,6 +269,8 @@ func main() {
 	defer stopTracing()
 	// hyde/lab: OTel/Prometheus registry metrics on /metrics
 	startMetrics()
+	// hyde/lab: REST + SSE surface (registry, commands, events) on API_PORT
+	startREST(handler)
 	// Run central system
 	log.Infof("starting central system on port %v", listenPort)
 	centralSystem.Start(listenPort, "/{ws}")

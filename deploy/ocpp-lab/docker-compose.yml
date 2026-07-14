@@ -24,6 +24,10 @@ services:
       - OTLP_ENDPOINT=otel-collector:4317  # OTLP traces (push) -> collector
       - API_PORT=8080                  # REST/SSE surface (Traefik path route /api)
       - PUBLIC_WS_URL=wss://ocpp-lab.hydecharge.com  # advertised charger endpoint
+      - TSDB_DSN=postgres://ocpplab:ocpplab@timescale:5432/ocpplab?sslmode=disable  # raw meter samples -> Timescale
+    depends_on:
+      timescale:
+        condition: service_started
     # No host port publish: Traefik (on dokploy-network) is the ingress.
     networks:
       - sim
@@ -45,6 +49,26 @@ services:
     networks:
       - sim
     tty: true
+
+  # --- product data: raw per-session meter samples (ADR-0003 preview) ---
+  # Every SampledValue the CS receives lands in the meter_samples hypertable
+  # (written by example/1.6/cs/tsdb.go); Grafana reads it via the `timescale`
+  # datasource for the "OCPP Sessions (lab)" dashboard. Ops metrics stay in
+  # Prometheus — product-data plane and ops plane are deliberately separate.
+  timescale:
+    image: timescale/timescaledb:latest-pg16
+    container_name: ocpp-lab-timescale
+    environment:
+      - POSTGRES_USER=ocpplab
+      - POSTGRES_PASSWORD=ocpplab
+      - POSTGRES_DB=ocpplab
+    volumes:
+      - timescale-data:/var/lib/postgresql/data
+      # First-boot schema (hypertable + index); tsdb.go re-applies it
+      # idempotently at CS boot, so a stale volume still converges.
+      - ./timescale-init.sql:/docker-entrypoint-initdb.d/10-meter-samples.sql:ro
+    networks:
+      - sim
 
   # --- observability: scrape the CS registry metrics + visualize ---
   prometheus:
@@ -118,3 +142,7 @@ networks:
   # central-system:8887. For a LOCAL run first: docker network create dokploy-network
   dokploy-network:
     external: true
+
+volumes:
+  # Raw meter samples survive redeploys (Dokploy recreates containers, not volumes).
+  timescale-data:

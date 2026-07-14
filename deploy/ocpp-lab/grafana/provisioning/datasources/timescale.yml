@@ -1,0 +1,23 @@
+apiVersion: 1
+datasources:
+  # Product-data plane: raw per-session meter samples (meter_samples
+  # hypertable) written by the CS tsdb writer. Ops metrics stay on the
+  # Prometheus datasource — ADR-0003's raw-vs-projection / ops-vs-product
+  # separation, previewed inside one lab Grafana.
+  - name: TimescaleDB
+    type: postgres
+    uid: timescale
+    access: proxy
+    url: timescale:5432
+    user: ocpplab
+    secureJsonData:
+      password: ocpplab
+    jsonData:
+      database: ocpplab
+      sslmode: disable
+      timescaledb: true
+      postgresVersion: 1600
+      maxOpenConns: 4
+      maxIdleConns: 2
+      connMaxLifetime: 14400
+    editable: false

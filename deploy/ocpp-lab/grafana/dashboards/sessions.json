@@ -1,0 +1,214 @@
+{
+  "uid": "ocpp-sessions",
+  "title": "OCPP Sessions (lab)",
+  "description": "Per-session charging data read from TimescaleDB (meter_samples hypertable) — the product-data plane, deliberately separate from the Prometheus ops metrics on the registry dashboard. Previews hydecharge-ocpi ADR-0003: raw samples stay raw in the store; normalization (kWh→Wh) happens in the query as a projection. The internal sim only reports Energy.Active.Export.Register — power and SoC panels fill in when a real charger connects.",
+  "tags": ["ocpp", "lab", "sessions", "timescale"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 1,
+  "timezone": "browser",
+  "fiscalYearStartMonth": 0,
+  "time": { "from": "now-24h", "to": "now" },
+  "refresh": "30s",
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "OCPP Registry (lab)",
+      "type": "link",
+      "url": "d/ocpp-registry"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "chargepoint",
+        "label": "charge point",
+        "type": "query",
+        "datasource": { "type": "postgres", "uid": "timescale" },
+        "definition": "SELECT DISTINCT charge_point FROM meter_samples ORDER BY 1",
+        "query": "SELECT DISTINCT charge_point FROM meter_samples ORDER BY 1",
+        "refresh": 2,
+        "sort": 0,
+        "includeAll": false,
+        "multi": false,
+        "options": [],
+        "current": {}
+      },
+      {
+        "name": "session",
+        "label": "session (tx)",
+        "type": "query",
+        "datasource": { "type": "postgres", "uid": "timescale" },
+        "definition": "SELECT DISTINCT transaction_id FROM meter_samples WHERE transaction_id IS NOT NULL AND charge_point = '$chargepoint' ORDER BY 1 DESC LIMIT 50",
+        "query": "SELECT DISTINCT transaction_id FROM meter_samples WHERE transaction_id IS NOT NULL AND charge_point = '$chargepoint' ORDER BY 1 DESC LIMIT 50",
+        "refresh": 2,
+        "sort": 0,
+        "includeAll": false,
+        "multi": false,
+        "options": [],
+        "current": {}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Energy register — session $session",
+      "description": "Cumulative energy register readings for the selected transaction, normalized to Wh in the query (the store keeps the raw value + unit). The sim's register grows ~2 Wh per sample.",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watth",
+          "noValue": "No energy samples for this session yet",
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "showPoints": "auto",
+            "pointSize": 5,
+            "spanNulls": true,
+            "axisSoftMin": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT ts AS \"time\", measurand || CASE WHEN phase <> '' THEN ' ' || phase ELSE '' END AS metric, value * CASE WHEN unit IN ('kWh','kW') THEN 1000 ELSE 1 END AS value FROM meter_samples WHERE transaction_id = $session AND charge_point = '$chargepoint' AND measurand LIKE 'Energy%' ORDER BY ts"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Power — session $session",
+      "description": "Instantaneous power samples for the selected transaction, normalized to W in the query.",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "noValue": "No power samples — the internal sim only reports the energy register. Power (and SoC) appear when a real charger connects.",
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "auto",
+            "pointSize": 5,
+            "spanNulls": true,
+            "axisSoftMin": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT ts AS \"time\", measurand || CASE WHEN phase <> '' THEN ' ' || phase ELSE '' END AS metric, value * CASE WHEN unit = 'kW' THEN 1000 ELSE 1 END AS value FROM meter_samples WHERE transaction_id = $session AND charge_point = '$chargepoint' AND measurand LIKE 'Power%' ORDER BY ts"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Sessions per day (all charge points)",
+      "description": "Distinct transactions per day across the fleet — time_bucket('1 day') over the dashboard range.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "No sessions in range",
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "axisSoftMin": 0
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time_bucket('1 day', ts) AS \"time\", count(DISTINCT transaction_id) AS \"sessions\" FROM meter_samples WHERE transaction_id IS NOT NULL AND $__timeFilter(ts) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Recent sessions",
+      "description": "Latest 25 transactions with sample counts and the energy-register span (max − min per measurand, normalized to Wh). Ignores the dashboard time range so the session picker always has context.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No sessions recorded yet",
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "filterable": false }
+        },
+        "overrides": []
+      },
+      "options": { "showHeader": true, "sortBy": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT s.transaction_id AS \"tx\", s.charge_point AS \"charge point\", min(s.first_ts) AS \"first sample\", max(s.last_ts) AS \"last sample\", sum(s.n)::int AS \"energy samples\", max(s.span_wh) AS \"energy Wh (register span)\" FROM (SELECT transaction_id, charge_point, measurand, min(ts) AS first_ts, max(ts) AS last_ts, count(*) AS n, round((max(value * CASE WHEN unit IN ('kWh','kW') THEN 1000 ELSE 1 END) - min(value * CASE WHEN unit IN ('kWh','kW') THEN 1000 ELSE 1 END))::numeric, 1) AS span_wh FROM meter_samples WHERE transaction_id IS NOT NULL AND measurand LIKE 'Energy%' GROUP BY 1, 2, 3) s GROUP BY 1, 2 ORDER BY max(s.last_ts) DESC LIMIT 25"
+        }
+      ]
+    }
+  ]
+}

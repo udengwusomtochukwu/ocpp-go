@@ -24,3 +24,14 @@ SELECT create_hypertable('meter_samples', 'ts', if_not_exists => TRUE);
 -- Session-centric access path: "samples of tx N on charger X, in time order".
 CREATE INDEX IF NOT EXISTS meter_samples_cp_tx_ts_idx
     ON meter_samples (charge_point, transaction_id, ts DESC);
+
+-- Lifecycle policies, lab-sized (ADR-0003 previews the knobs; prod keeps
+-- multi-year data and archives instead of dropping): compress chunks once
+-- they're a week old, drop raw samples after 90 days.
+ALTER TABLE meter_samples SET (
+    timescaledb.compress,
+    timescaledb.compress_orderby = 'ts DESC',
+    timescaledb.compress_segmentby = 'charge_point, transaction_id'
+);
+SELECT add_compression_policy('meter_samples', compress_after => INTERVAL '7 days', if_not_exists => TRUE);
+SELECT add_retention_policy('meter_samples', drop_after => INTERVAL '90 days', if_not_exists => TRUE);

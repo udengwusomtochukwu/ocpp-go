@@ -4,9 +4,12 @@
   "tags": ["ocpp", "lab"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 4,
+  "version": 5,
   "refresh": "5s",
   "time": { "from": "now-30m", "to": "now" },
+  "links": [
+    { "asDropdown": false, "icon": "dashboard", "includeVars": false, "keepTime": true, "tags": [], "targetBlank": false, "title": "OCPP Sessions (lab)", "type": "link", "url": "d/ocpp-sessions" }
+  ],
   "templating": { "list": [] },
   "annotations": { "list": [] },
   "panels": [

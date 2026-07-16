@@ -70,6 +70,20 @@ var tsdbSchema = []string{
 		ON meter_samples (charge_point, transaction_id, ts DESC)`,
 }
 
+// tsdbPolicies are lifecycle knobs (compress after 7 days, drop after 90 —
+// lab-sized stand-ins for ADR-0003's multi-year retention + archive). Applied
+// best-effort after the schema: the deployed volume predates these policies,
+// and a failure (say a TimescaleDB release renaming the API) must degrade to
+// "no compression", never to "no writer".
+var tsdbPolicies = []string{
+	`ALTER TABLE meter_samples SET (
+		timescaledb.compress,
+		timescaledb.compress_orderby = 'ts DESC',
+		timescaledb.compress_segmentby = 'charge_point, transaction_id')`,
+	`SELECT add_compression_policy('meter_samples', compress_after => INTERVAL '7 days', if_not_exists => TRUE)`,
+	`SELECT add_retention_policy('meter_samples', drop_after => INTERVAL '90 days', if_not_exists => TRUE)`,
+}
+
 // startTimescale launches the meter-sample writer when TSDB_DSN is set.
 func startTimescale() {
 	dsn, ok := os.LookupEnv(envVarTsdbDSN)
@@ -142,6 +156,7 @@ func tsdbWriter(pool *pgxpool.Pool) {
 		}
 		break
 	}
+	tsdbApplyPolicies(pool)
 	log.Info("tsdb: timescale meter-sample writer started")
 	batch := make([]meterSample, 0, tsdbBatchMax)
 	ticker := time.NewTicker(tsdbFlushEvery)
@@ -160,6 +175,18 @@ func tsdbWriter(pool *pgxpool.Pool) {
 				batch = batch[:0]
 			}
 		}
+	}
+}
+
+// tsdbApplyPolicies applies the lifecycle policies, warning instead of
+// failing — the writer must start even if a policy statement is rejected.
+func tsdbApplyPolicies(pool *pgxpool.Pool) {
+	for _, stmt := range tsdbPolicies {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		if _, err := pool.Exec(ctx, stmt); err != nil {
+			log.Warnf("tsdb: lifecycle policy skipped: %v", err)
+		}
+		cancel()
 	}
 }
 

@@ -1,15 +1,15 @@
 {
   "uid": "ocpp-sessions",
   "title": "OCPP Sessions (lab)",
-  "description": "Per-session charging data read from TimescaleDB (meter_samples hypertable) — the product-data plane, deliberately separate from the Prometheus ops metrics on the registry dashboard. Previews hydecharge-ocpi ADR-0003: raw samples stay raw in the store; normalization (kWh→Wh) happens in the query as a projection. The internal sim only reports Energy.Active.Export.Register — power and SoC panels fill in when a real charger connects.",
+  "description": "Per-session charging data read from TimescaleDB (meter_samples hypertable) — the product-data plane, deliberately separate from the Prometheus ops metrics on the registry dashboard. Built around the first real charger: a battery-buffered dual-gun DC FlexPole whose HMI labels the guns A (connector 1) and B (connector 2). Session-scoped panels ignore the time range in SQL but plot in absolute time — if a curve looks empty, widen the range to cover the session (or use the panel's zoom-to-data). Raw samples stay raw in the store; unit normalization (kW/kWh) happens per-row in the queries.",
   "tags": ["ocpp", "lab", "sessions", "timescale"],
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "graphTooltip": 1,
   "timezone": "browser",
   "fiscalYearStartMonth": 0,
-  "time": { "from": "now-24h", "to": "now" },
+  "time": { "from": "now-7d", "to": "now" },
   "refresh": "30s",
   "annotations": {
     "list": [
@@ -58,8 +58,8 @@
         "label": "session (tx)",
         "type": "query",
         "datasource": { "type": "postgres", "uid": "timescale" },
-        "definition": "SELECT DISTINCT transaction_id FROM meter_samples WHERE transaction_id IS NOT NULL AND charge_point = '$chargepoint' ORDER BY 1 DESC LIMIT 50",
-        "query": "SELECT DISTINCT transaction_id FROM meter_samples WHERE transaction_id IS NOT NULL AND charge_point = '$chargepoint' ORDER BY 1 DESC LIMIT 50",
+        "definition": "SELECT transaction_id AS \"__value\", transaction_id || '  (' || to_char(min(ts) AT TIME ZONE 'Europe/Stockholm', 'Mon DD HH24:MI') || ', ' || CASE connector_id WHEN 1 THEN 'Gun A' WHEN 2 THEN 'Gun B' ELSE 'conn ' || connector_id END || ')' AS \"__text\" FROM meter_samples WHERE transaction_id IS NOT NULL AND charge_point = '$chargepoint' GROUP BY transaction_id, connector_id ORDER BY transaction_id DESC LIMIT 50",
+        "query": "SELECT transaction_id AS \"__value\", transaction_id || '  (' || to_char(min(ts) AT TIME ZONE 'Europe/Stockholm', 'Mon DD HH24:MI') || ', ' || CASE connector_id WHEN 1 THEN 'Gun A' WHEN 2 THEN 'Gun B' ELSE 'conn ' || connector_id END || ')' AS \"__text\" FROM meter_samples WHERE transaction_id IS NOT NULL AND charge_point = '$chargepoint' GROUP BY transaction_id, connector_id ORDER BY transaction_id DESC LIMIT 50",
         "refresh": 2,
         "sort": 0,
         "includeAll": false,
@@ -71,72 +71,414 @@
   },
   "panels": [
     {
+      "id": 100,
+      "type": "row",
+      "title": "Selected session — $chargepoint · tx $session",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "panels": []
+    },
+    {
       "id": 1,
-      "type": "timeseries",
-      "title": "Energy register — session $session",
-      "description": "Cumulative energy register readings for the selected transaction, normalized to Wh in the query (the store keeps the raw value + unit). The sim's register grows ~2 Wh per sample.",
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "type": "stat",
+      "title": "Gun",
+      "description": "Which EVSE (connector) served this transaction, mapped to the physical HMI labels: connector 1 = Gun A, connector 2 = Gun B.",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
       "datasource": { "type": "postgres", "uid": "timescale" },
       "fieldConfig": {
         "defaults": {
-          "unit": "watth",
-          "noValue": "No energy samples for this session yet",
-          "color": { "mode": "palette-classic" },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "fillOpacity": 12,
-            "showPoints": "auto",
-            "pointSize": 5,
-            "spanNulls": true,
-            "axisSoftMin": 0
-          }
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "—",
+          "color": { "mode": "fixed", "fixedColor": "text" },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": { "text": "Gun A", "color": "#5794F2", "index": 0 },
+                "2": { "text": "Gun B", "color": "#FF780A", "index": 1 }
+              }
+            }
+          ]
         },
         "overrides": []
       },
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "none" }
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
       },
       "targets": [
         {
           "refId": "A",
           "datasource": { "type": "postgres", "uid": "timescale" },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS \"time\", measurand || CASE WHEN phase <> '' THEN ' ' || phase ELSE '' END AS metric, value * CASE WHEN unit IN ('kWh','kW') THEN 1000 ELSE 1 END AS value FROM meter_samples WHERE transaction_id = $session AND charge_point = '$chargepoint' AND measurand LIKE 'Energy%' ORDER BY ts"
+          "rawSql": "SELECT max(connector_id) AS gun FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id = $session"
         }
       ]
     },
     {
       "id": 2,
-      "type": "timeseries",
-      "title": "Power — session $session",
-      "description": "Instantaneous power samples for the selected transaction, normalized to W in the query.",
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "type": "stat",
+      "title": "Session duration",
+      "description": "max(ts) − min(ts) across every sample attributed to the transaction. Includes the pre-charge handshake before power flows (tx 100: plugged in 16:15, power from 16:20).",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
       "datasource": { "type": "postgres", "uid": "timescale" },
       "fieldConfig": {
         "defaults": {
-          "unit": "watt",
-          "noValue": "No power samples — the internal sim only reports the energy register. Power (and SoC) appear when a real charger connects.",
+          "unit": "s",
+          "decimals": 1,
+          "noValue": "no samples",
+          "color": { "mode": "fixed", "fixedColor": "text" },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS \"duration\" FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id = $session"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Energy delivered",
+      "description": "Register span (max − min) of Energy.Active.Import.Register within the transaction, normalized per-row from the reported unit. The register is a lifetime meter — only the in-session delta is meaningful, never the absolute value.",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "decimals": 2,
+          "noValue": "no import register",
+          "color": { "mode": "fixed", "fixedColor": "text" },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) AS \"energy\" FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id = $session AND measurand = 'Energy.Active.Import.Register'"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Avg power",
+      "description": "Mean of the Power.Active.Import samples during the transaction (≈ register span ÷ charging time; includes the ramp-up).",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "noValue": "no power samples",
+          "color": { "mode": "fixed", "fixedColor": "text" },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) AS \"avg power\" FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id = $session AND measurand = 'Power.Active.Import'"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Peak power",
+      "description": "Highest Power.Active.Import sample in the transaction. Compare with the power panel's Offered ceiling: peak < offered means the car was the limiter.",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "noValue": "no power samples",
+          "color": { "mode": "fixed", "fixedColor": "text" },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) AS \"peak power\" FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id = $session AND measurand = 'Power.Active.Import'"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Meter reports",
+      "description": "Distinct report timestamps within the transaction (each MeterValues report carries one row per measurand — tx 100: 60 reports at ~10 s cadence).",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "color": { "mode": "fixed", "fixedColor": "text" },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(DISTINCT ts) AS \"meter reports\" FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id = $session"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "SoC start → end",
+      "description": "First non-zero and last SoC the EV reported (location ≠ 'Body', which is the charger's own buffer battery). Zero readings before the car announces its SoC are ignored. Empty ⇒ this firmware didn't send SoC for the session.",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 5 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 0,
+          "min": 0,
+          "max": 100,
+          "noValue": "no SoC from firmware",
+          "color": { "mode": "fixed", "fixedColor": "#B877D9" },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT round(first(value, ts) FILTER (WHERE value > 0))::int AS \"SoC start\", round(last(value, ts))::int AS \"SoC end\" FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id = $session AND measurand = 'SoC' AND location <> 'Body'"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Fully charged?",
+      "description": "Yes when the car's last reported SoC ≥ 99%; otherwise shows the SoC it reached. Empty ⇒ the firmware sent no EV SoC, so the question can't be answered from meter data.",
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 5 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "no SoC reported",
+          "color": { "mode": "fixed", "fixedColor": "text" },
+          "mappings": [
+            { "type": "regex", "options": { "pattern": "^Yes.*", "result": { "color": "green", "index": 0 } } },
+            { "type": "regex", "options": { "pattern": "^No.*", "result": { "color": "orange", "index": 1 } } }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT CASE WHEN last(value, ts) >= 99 THEN 'Yes - ended at ' || round(last(value, ts))::int || '%' ELSE 'No - reached ' || round(last(value, ts))::int || '%' END AS \"fully charged\" FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id = $session AND measurand = 'SoC' AND location <> 'Body'"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "Session end",
+      "description": "Taper heuristic: if the average Power.Active.Import over the final 2 minutes is below 10% of the session peak, the car tapered off — the normal full-battery finish. Otherwise the session ended while still drawing hard: cable pulled or stop pressed before the car was done. Heuristic only, but a DC session ending at high power is a strong 'left early' signal (tx 100 ended at ~87 kW of a 119.9 kW peak).",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 5 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "no power samples",
+          "color": { "mode": "fixed", "fixedColor": "text" },
+          "mappings": [
+            { "type": "regex", "options": { "pattern": "^Tapered.*", "result": { "color": "green", "index": 0 } } },
+            { "type": "regex", "options": { "pattern": "^Abrupt.*", "result": { "color": "orange", "index": 1 } } }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH p AS (SELECT ts, value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END AS kw FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id = $session AND measurand = 'Power.Active.Import') SELECT CASE WHEN count(*) = 0 THEN NULL WHEN avg(kw) FILTER (WHERE ts >= (SELECT max(ts) FROM p) - interval '2 minutes') < 0.10 * max(kw) THEN 'Tapered - charge completed' ELSE 'Abrupt stop - unplugged early?' END AS \"session end\" FROM p"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Power — drawn vs offered",
+      "description": "Power.Active.Import (what the car actually drew) against Power.Offered (the charger's ceiling, dashed). The gap is what the session could have gone at: drawn < offered ⇒ the car is the limiter (battery management, temperature, taper). tx 100: 150 kW offered, 119.9 kW peak drawn — car-limited throughout. Plotted in absolute time; widen the range if empty.",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "noValue": "No power samples for this session",
           "color": { "mode": "palette-classic" },
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
             "lineWidth": 2,
-            "fillOpacity": 15,
+            "fillOpacity": 0,
+            "gradientMode": "none",
             "showPoints": "auto",
-            "pointSize": 5,
+            "pointSize": 4,
             "spanNulls": true,
             "axisSoftMin": 0
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Drawn (Power.Active.Import)" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#73BF69" } },
+              { "id": "custom.fillOpacity", "value": 18 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Offered (Power.Offered)" },
+            "properties": [
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "#8E8E8E" } },
+              { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 10] } },
+              { "id": "custom.fillOpacity", "value": 0 }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "none" }
+        "tooltip": { "mode": "multi", "sort": "desc" }
       },
       "targets": [
         {
@@ -144,28 +486,73 @@
           "datasource": { "type": "postgres", "uid": "timescale" },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS \"time\", measurand || CASE WHEN phase <> '' THEN ' ' || phase ELSE '' END AS metric, value * CASE WHEN unit = 'kW' THEN 1000 ELSE 1 END AS value FROM meter_samples WHERE transaction_id = $session AND charge_point = '$chargepoint' AND measurand LIKE 'Power%' ORDER BY ts"
+          "rawSql": "SELECT ts AS \"time\", CASE measurand WHEN 'Power.Active.Import' THEN 'Drawn (Power.Active.Import)' ELSE 'Offered (Power.Offered)' END AS metric, value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END AS value FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id = $session AND measurand IN ('Power.Active.Import', 'Power.Offered') ORDER BY ts"
         }
       ]
     },
     {
-      "id": 3,
+      "id": 11,
       "type": "timeseries",
-      "title": "Sessions per day (all charge points)",
-      "description": "Distinct transactions per day across the fleet — time_bucket('1 day') over the dashboard range.",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "title": "EV state of charge",
+      "description": "The car's SoC as reported by the charger (location = 'EV' on this firmware; the charger's own buffer battery, location = 'Body', is excluded — see the buffer panel below). The zeros at session start are the charger reporting before the car had announced its SoC. If this panel is empty for a session, the firmware didn't send EV SoC.",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
       "datasource": { "type": "postgres", "uid": "timescale" },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
-          "decimals": 0,
-          "noValue": "No sessions in range",
-          "color": { "mode": "palette-classic" },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "noValue": "No SoC for this session — firmware didn't send it",
+          "color": { "mode": "fixed", "fixedColor": "#B877D9" },
           "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 1,
-            "fillOpacity": 70,
-            "showPoints": "never",
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT ts AS \"time\", 'EV SoC' AS metric, value FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id = $session AND measurand = 'SoC' AND location <> 'Body' ORDER BY ts"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Energy delivered this session",
+      "description": "Cumulative energy since session start: the import register minus its first in-session reading, so the curve runs 0 → session total (tx 100: 0 → 15.36 kWh). Never the absolute register — that's a lifetime meter (~1.14 MWh on this charger).",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 18 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "decimals": 2,
+          "noValue": "No import-register samples for this session",
+          "color": { "mode": "fixed", "fixedColor": "#73BF69" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": true,
             "axisSoftMin": 0
           }
         },
@@ -181,32 +568,306 @@
           "datasource": { "type": "postgres", "uid": "timescale" },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT time_bucket('1 day', ts) AS \"time\", count(DISTINCT transaction_id) AS \"sessions\" FROM meter_samples WHERE transaction_id IS NOT NULL AND $__timeFilter(ts) GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT ts AS \"time\", 'Energy delivered' AS metric, value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END - first_value(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) OVER (ORDER BY ts) AS value FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id = $session AND measurand = 'Energy.Active.Import.Register' ORDER BY ts"
         }
       ]
     },
     {
-      "id": 4,
-      "type": "table",
-      "title": "Recent sessions",
-      "description": "Latest 25 transactions with sample counts and the energy-register span (max − min per measurand, normalized to Wh). Ignores the dashboard time range so the session picker always has context.",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "id": 101,
+      "type": "row",
+      "title": "EVSEs (guns) — $chargepoint",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
+      "panels": []
+    },
+    {
+      "id": 13,
+      "type": "state-timeline",
+      "title": "Gun activity — when was each EVSE charging?",
+      "description": "Per-minute buckets of meter_samples with a transaction attached, one lane per gun; the block value is the OCPP transaction id. Gaps longer than 6 minutes break a block (the 5-minute pre-charge handshake stays bridged). A gun with no lane had no session in range. Lab caveat: the CS transaction counter resets on restart, so a reused tx id shows as one continuous state across restarts.",
+      "gridPos": { "h": 8, "w": 18, "x": 0, "y": 27 },
       "datasource": { "type": "postgres", "uid": "timescale" },
       "fieldConfig": {
         "defaults": {
-          "noValue": "No sessions recorded yet",
-          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "filterable": false }
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "No sessions in range on this charge point",
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 72,
+            "spanNulls": false,
+            "insertNulls": 360000
+          },
+          "mappings": []
         },
         "overrides": []
       },
-      "options": { "showHeader": true, "sortBy": [] },
+      "options": {
+        "mergeValues": true,
+        "showValue": "auto",
+        "alignValue": "left",
+        "rowHeight": 0.85,
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time_bucket('1 minute', ts) AS \"time\", CASE connector_id WHEN 1 THEN 'Gun A' WHEN 2 THEN 'Gun B' ELSE 'Connector ' || connector_id END AS metric, max(transaction_id) AS value FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id IS NOT NULL AND $__timeFilter(ts) GROUP BY 1, 2 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "stat",
+      "title": "Max simultaneous guns",
+      "description": "Highest number of this charge point's guns metering a transaction in the same minute, over the dashboard range. 2 ⇒ both guns charged at once; 1 ⇒ sessions never overlapped.",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 27 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "color": { "mode": "fixed", "fixedColor": "text" },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
       "targets": [
         {
           "refId": "A",
           "datasource": { "type": "postgres", "uid": "timescale" },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT s.transaction_id AS \"tx\", s.charge_point AS \"charge point\", min(s.first_ts) AS \"first sample\", max(s.last_ts) AS \"last sample\", sum(s.n)::int AS \"energy samples\", max(s.span_wh) AS \"energy Wh (register span)\" FROM (SELECT transaction_id, charge_point, measurand, min(ts) AS first_ts, max(ts) AS last_ts, count(*) AS n, round((max(value * CASE WHEN unit IN ('kWh','kW') THEN 1000 ELSE 1 END) - min(value * CASE WHEN unit IN ('kWh','kW') THEN 1000 ELSE 1 END))::numeric, 1) AS span_wh FROM meter_samples WHERE transaction_id IS NOT NULL AND measurand LIKE 'Energy%' GROUP BY 1, 2, 3) s GROUP BY 1, 2 ORDER BY max(s.last_ts) DESC LIMIT 25"
+          "rawSql": "SELECT COALESCE(max(active), 0) AS \"max simultaneous guns\" FROM (SELECT time_bucket('1 minute', ts) AS b, count(DISTINCT connector_id) AS active FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id IS NOT NULL AND $__timeFilter(ts) GROUP BY 1) x"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Buffer battery SoC (grid-side view)",
+      "description": "Checked live: this firmware exposes no grid-side measurands over OCPP (no location='Inlet' rows — only Outlet, SoC@EV and SoC@Body), so grid draw vs car draw can't be plotted directly. What it does send is SoC at location='Body': the FlexPole's internal buffer battery, reported per gun side every ~15 min even while idle. The battery-buffered signature is visible here instead — the buffer dips while a car draws more than the grid feed, then recharges slowly afterwards.",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 35 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "noValue": "No Body-SoC samples in range — firmware doesn't report a buffer battery",
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": 2700000
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Buffer SoC - Gun A side" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#5794F2" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Buffer SoC - Gun B side" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#FF780A" } }]
+          }
+        ]
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time_bucket('1 minute', ts) AS \"time\", CASE connector_id WHEN 1 THEN 'Buffer SoC - Gun A side' WHEN 2 THEN 'Buffer SoC - Gun B side' ELSE 'Buffer SoC - connector ' || connector_id END AS metric, avg(value) AS value FROM meter_samples WHERE charge_point = '$chargepoint' AND measurand = 'SoC' AND location = 'Body' AND $__timeFilter(ts) GROUP BY 1, 2 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "table",
+      "title": "EVSEs in service",
+      "description": "Per-gun liveness and usage for $chargepoint. 'Last activity' is the newest meter sample of any kind (idle buffer-battery heartbeats included, all time); last tx, sessions and kWh respect the dashboard range and count only metered transactions. A gun that reports but shows 0 sessions is in service, just unused. Live connector status is on dashboard-dev.hydecharge.com/chargers.",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 35 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No samples for this charge point",
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "filterable": false },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "gun" },
+            "properties": [{ "id": "custom.width", "value": 90 }]
+          }
+        ]
+      },
+      "options": { "showHeader": true, "sortBy": [], "footer": { "show": false, "reducer": ["sum"], "countRows": false, "fields": "" } },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH act AS (SELECT connector_id, max(ts) AS last_any FROM meter_samples WHERE charge_point = '$chargepoint' GROUP BY 1), per_tx AS (SELECT connector_id, transaction_id, max(ts) AS last_ts, max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') AS kwh FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id IS NOT NULL AND $__timeFilter(ts) GROUP BY 1, 2) SELECT CASE act.connector_id WHEN 1 THEN 'Gun A' WHEN 2 THEN 'Gun B' ELSE 'Connector ' || act.connector_id END AS \"gun\", act.last_any AS \"last activity\", last(per_tx.transaction_id, per_tx.last_ts) AS \"last tx (range)\", count(per_tx.transaction_id)::int AS \"sessions (range)\", COALESCE(round(sum(per_tx.kwh)::numeric, 2), 0) AS \"kWh (range)\" FROM act LEFT JOIN per_tx USING (connector_id) GROUP BY act.connector_id, act.last_any ORDER BY act.connector_id"
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "type": "row",
+      "title": "Fleet (all charge points)",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 44 },
+      "panels": []
+    },
+    {
+      "id": 17,
+      "type": "barchart",
+      "title": "Sessions per day",
+      "description": "Distinct (charge point, tx) pairs with samples on each calendar day (Europe/Stockholm), across the fleet. Rendered as category bars: the previous version bucketed to UTC midnight on a time axis, so with a short range the bucket timestamp fell outside the visible window and the panel claimed 'No sessions in range' despite data. Caveats: a tx reporting across midnight counts on each day it touches, and sim tx ids merge across CS restarts.",
+      "gridPos": { "h": 7, "w": 18, "x": 0, "y": 45 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "No sessions in range",
+          "color": { "mode": "fixed", "fixedColor": "#B877D9" },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 78,
+            "gradientMode": "none",
+            "axisSoftMin": 0
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100,
+        "xField": "day",
+        "showValue": "auto",
+        "stacking": "none",
+        "groupWidth": 0.7,
+        "barWidth": 0.8,
+        "fullHighlight": false,
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT to_char(time_bucket('1 day', ts, 'Europe/Stockholm') AT TIME ZONE 'Europe/Stockholm', 'YYYY-MM-DD') AS \"day\", count(DISTINCT charge_point || ':' || transaction_id)::int AS \"sessions\" FROM meter_samples WHERE transaction_id IS NOT NULL AND $__timeFilter(ts) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "type": "stat",
+      "title": "Cars charged",
+      "description": "Distinct (charge point, tx) pairs with samples in the dashboard range — i.e. metered charging sessions, our best proxy for cars served. Lab caveat: tx ids come from the CS and its counter resets on restart, so sim sessions reusing an id merge into one.",
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 45 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "color": { "mode": "fixed", "fixedColor": "#B877D9" },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(DISTINCT charge_point || ':' || transaction_id) AS \"cars charged\" FROM meter_samples WHERE transaction_id IS NOT NULL AND $__timeFilter(ts)"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "table",
+      "title": "Sessions",
+      "description": "Latest 25 transactions fleet-wide, newest first. kWh is the import-register span (falls back to the export register for the sim, which sends export only); avg kW is the mean of in-tx power samples; last SoC is the car's final reported value. Ignores the dashboard time range so the session picker always has context. Lab caveat: sim tx ids reset per CS restart, so a reused id merges into one long row.",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 52 },
+      "datasource": { "type": "postgres", "uid": "timescale" },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No sessions recorded yet",
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "filterable": false },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "duration" },
+            "properties": [{ "id": "unit", "value": "s" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "gun" },
+            "properties": [{ "id": "custom.width", "value": 70 }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "tx" },
+            "properties": [{ "id": "custom.width", "value": 70 }]
+          }
+        ]
+      },
+      "options": { "showHeader": true, "sortBy": [], "footer": { "show": false, "reducer": ["sum"], "countRows": false, "fields": "" } },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "postgres", "uid": "timescale" },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT transaction_id AS \"tx\", charge_point AS \"charge point\", CASE connector_id WHEN 1 THEN 'A' WHEN 2 THEN 'B' ELSE connector_id::text END AS \"gun\", min(ts) AS \"start\", max(ts) AS \"end\", EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS \"duration\", round((COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')))::numeric, 2) AS \"kWh\", round(avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import')::numeric, 1) AS \"avg kW\", round(last(value, ts) FILTER (WHERE measurand = 'SoC' AND location <> 'Body'))::int AS \"last SoC %\" FROM meter_samples WHERE transaction_id IS NOT NULL GROUP BY 1, 2, 3 ORDER BY max(ts) DESC LIMIT 25"
         }
       ]
     }

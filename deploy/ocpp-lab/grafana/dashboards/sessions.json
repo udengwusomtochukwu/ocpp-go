@@ -1174,7 +1174,7 @@
       "description": "First non-zero and last non-zero SoC the EV reported (location ≠ 'Body', which is the charger's own buffer battery; the zeros the charger emits before the car announces its SoC are ignored). While the session is LIVE — newest sample under 3 minutes old — the second number is the car's SoC right now, marked '(now)' and still climbing; it becomes the final end-SoC once samples stop. Empty ⇒ this firmware sent no usable EV SoC for the session.",
       "gridPos": {
         "h": 4,
-        "w": 8,
+        "w": 6,
         "x": 0,
         "y": 50
       },
@@ -1242,8 +1242,8 @@
       "description": "Verdict rendered only after the session ends (no sample for 3 minutes): Yes when the car's last reported SoC ≥ 99%, otherwise the SoC it reached. While samples are still arriving it shows charging progress instead — an ongoing session can't be judged fully-charged-or-not. Empty ⇒ the firmware sent no EV SoC, so the question can't be answered from meter data.",
       "gridPos": {
         "h": 4,
-        "w": 8,
-        "x": 8,
+        "w": 6,
+        "x": 6,
         "y": 50
       },
       "datasource": {
@@ -1330,8 +1330,8 @@
       "description": "LIVE sessions (newest sample under 3 minutes old) show 'Session running' — the end-of-session verdict only renders once samples stop, because mid-session power is always near peak and would always read as an abrupt stop. Verdict heuristic: average Power.Active.Import over the final 2 minutes below 10% of session peak ⇒ the car tapered off, the normal full-battery finish; otherwise the session ended still drawing hard — cable pulled or stop pressed before the car was done (tx 100 ended at ~87 kW of a 119.9 kW peak). Heuristic only.",
       "gridPos": {
         "h": 4,
-        "w": 8,
-        "x": 16,
+        "w": 6,
+        "x": 12,
         "y": 50
       },
       "datasource": {
@@ -1408,6 +1408,64 @@
           "format": "table",
           "rawQuery": true,
           "rawSql": "WITH p AS (SELECT ts, value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END AS kw FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id = NULLIF('$session','')::int AND measurand = 'Power.Active.Import'), live AS (SELECT COALESCE(max(ts) > now() - interval '3 minutes', false) AS is_live, count(*) AS n_any FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id = NULLIF('$session','')::int), agg AS (SELECT count(*) AS n, max(kw) AS peak, avg(kw) FILTER (WHERE ts >= (SELECT max(ts) FROM p) - interval '2 minutes') AS tail FROM p) SELECT CASE WHEN live.n_any = 0 THEN NULL WHEN live.is_live THEN 'Session running (live)' WHEN agg.n = 0 THEN NULL WHEN agg.peak = 0 THEN 'No power drawn' WHEN agg.tail < 0.10 * agg.peak THEN 'Tapered - charge completed' ELSE 'Abrupt stop - unplugged early?' END AS \"session end\" FROM live, agg"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "Grid leverage — this session",
+      "description": "DERIVED ESTIMATE — this session's peak delivered power ÷ the 43 kW (63 A) nominal grid feed of a PEAK330-class unit: how many times faster than its grid connection this charge ran; the internal buffer battery supplied the difference. tx 100 ran 119.9 kW peak → 2.8×. Basis: nominal 43 kW feed (the live-measured refill ceiling ~43.6 kW on the buffer-physics estimator confirms it). Blank = the session drew no measurable power (software test rigs, or a car that plugged in but never charged).",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 50
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "noValue": "no power drawn",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3DDC5F"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT round((max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) / 43.0)::numeric, 1) || '× the grid feed' AS \"grid leverage\" FROM meter_samples WHERE charge_point = '$chargepoint' AND transaction_id = NULLIF('$session','')::int AND measurand = 'Power.Active.Import' HAVING max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) > 0"
         }
       ]
     },

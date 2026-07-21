@@ -1,0 +1,1038 @@
+{
+  "uid": "hyde-operations",
+  "title": "HYDE · Operations",
+  "description": "Day-to-day health of the charging lab for the operations team: backend and charger connectivity, freshness of charger reports, session and connection churn, command outcomes, faults with their matching log lines, per-gun service state and the buffer battery. Truth-first: 'No data' means nothing was reported (only counts are zero-filled), sessions are ordered by time (never by transaction id, which resets on redeploys), and in-progress sessions are never given a final verdict. Times display in your browser's timezone (site local time is Central European, CEST). Alert rules live in the Grafana folder 'OCPP Lab' — link at the bottom.",
+  "tags": [
+    "hyde",
+    "ocpp",
+    "lab"
+  ],
+  "timezone": "browser",
+  "weekStart": "monday",
+  "graphTooltip": 1,
+  "editable": true,
+  "schemaVersion": 39,
+  "version": 1,
+  "fiscalYearStartMonth": 0,
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "HYDE · Overview",
+      "type": "link",
+      "url": "d/hyde-overview"
+    },
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "OCPP Sessions (lab)",
+      "type": "link",
+      "url": "d/ocpp-sessions"
+    },
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "OCPP Registry (lab)",
+      "type": "link",
+      "url": "d/ocpp-registry"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bolt",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Alert rules (folder \"OCPP Lab\")",
+      "type": "link",
+      "url": "/grafana/alerting/list"
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 200,
+      "type": "row",
+      "title": "Service & connectivity",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Backend",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Whether the OCPP central system’s metrics endpoint answered its latest scrape (every 5 s). DOWN means the backend process is unreachable — chargers cannot start or stop sessions while it is down.",
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "up{job=\"ocpp-central-system\"}",
+          "legendFormat": "backend"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Chargers online",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Chargers holding a live websocket to the backend right now. Guarded by the scrape state: if the backend is unreachable this shows 'backend unreachable' rather than a stale count.",
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "backend unreachable",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(ocpp_chargers_connected) and on() (up{job=\"ocpp-central-system\"} == 1)",
+          "legendFormat": "online"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Chargers online — over time",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Connected-charger count over the selected range. Gaps mean the backend was not scrapeable at that time (unknown state) — they are deliberately not drawn as zero.",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(ocpp_chargers_connected)",
+          "legendFormat": "chargers online"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Charger freshness — newest report per charger",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Newest stored data report of any kind per charger, all time. The real charger (A2111…) reports its buffer battery roughly every 15 minutes even when idle, so more than ~35 minutes of silence while it shows as online is suspicious (orange), and hours of silence are red. chargePointSim and EXT01 are software test rigs that only report during test sessions — long silence there is expected.",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No charger has ever reported",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "silent for"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 2100
+                    },
+                    {
+                      "color": "red",
+                      "value": 7200
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [],
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT charge_point AS \"charge point\", max(ts) AS \"last report\", EXTRACT(EPOCH FROM (now() - max(ts))) AS \"silent for\" FROM meter_samples GROUP BY 1 ORDER BY 2 DESC"
+        }
+      ]
+    },
+    {
+      "id": 201,
+      "type": "row",
+      "title": "Sessions, connections & commands",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      },
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Connections & sessions per minute",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Charger socket churn (connections opened/closed) and charging session starts/stops, per minute. Spiky open/close pairs without sessions usually mean network trouble — Cloudflare idle cuts or a charger reboot loop. rate() runs over $__rate_interval with a 5 s min step so short-lived churn shows at its true height.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "opm",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(ocpp_connections_opened_total[$__rate_interval]))*60",
+          "legendFormat": "connections opened/min",
+          "interval": "5s"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(ocpp_connections_closed_total[$__rate_interval]))*60",
+          "legendFormat": "connections closed/min",
+          "interval": "5s"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(ocpp_transactions_started_total[$__rate_interval]))*60",
+          "legendFormat": "sessions started/min",
+          "interval": "5s"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(ocpp_transactions_stopped_total[$__rate_interval]))*60",
+          "legendFormat": "sessions stopped/min",
+          "interval": "5s"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Command success",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Share of operator commands (remote start/stop, unlock, configuration, …) the chargers answered positively in the selected range — counted as Accepted / Unlocked / Scheduled / RebootRequired responses. 'No commands in range' is the truth when nothing was sent, not an error.",
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 12,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 0,
+          "noValue": "No commands in range",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * (sum(increase(ocpp_command_results_total{status=~\"(?i)accepted|unlocked|scheduled|rebootrequired\"}[$__range])) or vector(0)) / sum(increase(ocpp_command_results_total[$__range]))",
+          "legendFormat": "success"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Command results by status (per min)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Every command response from the chargers, broken down by the status they answered (Accepted, Rejected, NotSupported, …). Empty panel = no commands were sent in the range.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "opm",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (status) (rate(ocpp_command_results_total[$__rate_interval]))*60",
+          "legendFormat": "{{status}}",
+          "interval": "5s"
+        }
+      ]
+    },
+    {
+      "id": 202,
+      "type": "row",
+      "title": "Faults & errors",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "panels": []
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Charger faults",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Fault reports (status notifications carrying an error code) received from chargers in the selected range. Zero-filled deliberately: zero faults is a real, meaningful zero.",
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 0,
+        "y": 17
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(increase(ocpp_faults_total[$__range])) or vector(0)",
+          "legendFormat": "faults"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Faults by error code (per min)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Charger fault reports broken down by their error code. The vendor-specific detail code, when a charger sends one, is visible in the matching log line on the right.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 4,
+        "y": 17
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "opm",
+          "min": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (error_code) (rate(ocpp_faults_total[$__rate_interval]))*60",
+          "legendFormat": "{{error_code}}",
+          "interval": "5s"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "logs",
+      "title": "Errors & charger fault lines (backend log)",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "description": "Backend log lines at warn/error severity plus charger status lines mentioning a fault — the place to find vendor error details (open a line for its full metadata, including the reporting charger). The recurring harmless 'upgrade failed' probe noise (health checks and scanners hitting the websocket port) is filtered out here; the unfiltered stream lives on the OCPP Registry dashboard.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"ocpp-central-system\"} | detected_level =~ `warn|error` != `upgrade failed`",
+          "queryType": "range",
+          "maxLines": 200
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"ocpp-central-system\"} | message = `StatusNotification` |~ `(?i)(fault|error)`",
+          "queryType": "range",
+          "maxLines": 100
+        }
+      ]
+    },
+    {
+      "id": 203,
+      "type": "row",
+      "title": "Guns & buffer battery",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "panels": []
+    },
+    {
+      "id": 11,
+      "type": "table",
+      "title": "Guns in service",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Per-gun service picture. 'last report' is the newest stored data of any kind (idle buffer-battery reports included, all time); 'last session' is the newest session end ever; 'sessions' and 'kWh' count only the dashboard's time range (default 24 h). A blank kWh means the gun reported no import energy meter in range (true for the software test rigs) — blank is the truth there, not zero. Reused transaction ids (the lab backend's counter resets on redeploy) are split into separate sessions by a 15-minute quiet gap.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No meter data stored yet",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gun"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "last report"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "last session"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "kWh"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kwatth"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [],
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4), act AS (SELECT charge_point, connector_id, max(ts) AS last_any FROM meter_samples GROUP BY 1, 2) SELECT act.charge_point AS \"charge point\", CASE act.connector_id WHEN 1 THEN 'Gun A' WHEN 2 THEN 'Gun B' ELSE 'Conn ' || act.connector_id END AS \"gun\", act.last_any AS \"last report\", max(s.end_ts) AS \"last session\", count(s.start_ts) FILTER (WHERE $__timeFilter(s.start_ts))::int AS \"sessions\", round(sum(s.kwh) FILTER (WHERE $__timeFilter(s.start_ts))::numeric, 1) AS \"kWh\" FROM act LEFT JOIN sessions s USING (charge_point, connector_id) GROUP BY 1, act.connector_id, 3 ORDER BY 1, act.connector_id"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Buffer battery — charge per gun side",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "State of charge of the charger’s internal buffer battery, per gun side, over the selected range. The battery-buffered signature: it dips while boosting a car beyond what the grid feed (~30 kW class) delivers, then refills slowly from the grid between sessions — a full recharge takes on the order of hours. Reported roughly every 15 minutes while the charger is connected; the line bridges gaps up to 45 minutes, longer gaps mean the charger was offline.",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "noValue": "No buffer battery reports in range",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "showPoints": "auto",
+            "pointSize": 4,
+            "spanNulls": 2700000
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gun A side"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gun B side"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF780A"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time_bucket('1 minute', ts) AS \"time\", CASE connector_id WHEN 1 THEN 'Gun A side' WHEN 2 THEN 'Gun B side' ELSE 'Connector ' || connector_id END AS metric, avg(value) AS value FROM meter_samples WHERE measurand = 'SoC' AND location = 'Body' AND $__timeFilter(ts) GROUP BY 1, 2 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 204,
+      "type": "row",
+      "title": "More dashboards",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "panels": []
+    },
+    {
+      "id": 13,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "options": {
+        "mode": "markdown",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "**More:** [HYDE · Overview](/grafana/d/hyde-overview) — the stakeholder view · [OCPP Sessions (lab)](/grafana/d/ocpp-sessions) — per-session engineering drill-down · [OCPP Registry (lab)](/grafana/d/ocpp-registry) — protocol counters, full logs & traces · [Alert rules — folder “OCPP Lab”](/grafana/alerting/list)\n\n*Times shown in your browser’s timezone (site local time is CEST). Refreshes every 30 s.*"
+      }
+    }
+  ]
+}

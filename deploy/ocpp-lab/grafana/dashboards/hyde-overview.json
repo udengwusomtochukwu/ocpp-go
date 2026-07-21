@@ -1,0 +1,1057 @@
+{
+  "uid": "hyde-overview",
+  "title": "HYDE · Overview",
+  "description": "The charging service at a glance — what is happening right now, and what the last days delivered. Built for any audience: no protocol knowledge needed. Every number comes straight from the chargers' own meter reports stored in the lab database; nothing is simulated or padded, so a panel saying 'no data' means exactly that. Sessions still running are labelled 'in progress' and never judged. Times display in your browser's timezone; daily totals roll over at midnight Central European time (CEST). Deep-dive dashboards are linked at the bottom.",
+  "tags": [
+    "hyde",
+    "ocpp",
+    "lab"
+  ],
+  "timezone": "browser",
+  "weekStart": "monday",
+  "graphTooltip": 1,
+  "editable": true,
+  "schemaVersion": 39,
+  "version": 1,
+  "fiscalYearStartMonth": 0,
+  "refresh": "1m",
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "HYDE · Operations",
+      "type": "link",
+      "url": "d/hyde-operations"
+    },
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "OCPP Sessions (lab)",
+      "type": "link",
+      "url": "d/ocpp-sessions"
+    },
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "OCPP Registry (lab)",
+      "type": "link",
+      "url": "d/ocpp-registry"
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Right now",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Chargers online",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "How many chargers hold a live connection to the charging backend at this moment. Orange zero = no charger can start a session. If the backend itself cannot be reached, this shows 'backend unreachable' instead of a stale number.",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "backend unreachable",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "orange",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(ocpp_chargers_connected) and on() (up{job=\"ocpp-central-system\"} == 1)",
+          "legendFormat": "online"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Guns charging now",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Charging guns actively delivering power (more than 0.5 kW) within the last 3 minutes, according to charger meter reports. A car that is plugged in but finished (or still handshaking) does not count. Zero is a real zero.",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*)::int AS \"guns charging\" FROM (SELECT charge_point, connector_id, last(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END, ts) AS kw_last FROM meter_samples WHERE measurand = 'Power.Active.Import' AND ts > now() - interval '3 minutes' GROUP BY 1, 2) g WHERE kw_last > 0.5"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Power flowing now",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Total power being delivered to cars right now — the sum of each gun’s newest power reading from the last 3 minutes. 0 kW simply means no car is drawing power at the moment.",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(round(sum(kw_last)::numeric, 1), 0) AS \"kW now\" FROM (SELECT charge_point, connector_id, last(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END, ts) AS kw_last FROM meter_samples WHERE measurand = 'Power.Active.Import' AND ts > now() - interval '3 minutes' GROUP BY 1, 2) g WHERE kw_last > 0.5"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "bargauge",
+      "title": "Fast-charge buffer battery",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "The charger’s internal battery (one share per gun side) that tops up fast charging beyond what the grid feed alone could deliver. High = full boost capacity available; it dips while boosting a car and slowly refills from the grid afterwards. Latest reading — the charger reports it roughly every 15 minutes, even when idle.",
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "noValue": "No buffer battery reporting",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 20
+              },
+              {
+                "color": "green",
+                "value": 50
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "minVizWidth": 0,
+        "minVizHeight": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT CASE connector_id WHEN 1 THEN 'Gun A side' WHEN 2 THEN 'Gun B side' ELSE 'Connector ' || connector_id END AS \"side\", round(last(value, ts))::int AS \"charge\" FROM meter_samples WHERE measurand = 'SoC' AND location = 'Body' GROUP BY connector_id ORDER BY connector_id"
+        }
+      ]
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "Today & the selected period",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Sessions today",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Charging sessions started since midnight local time (Central European, CEST) across all chargers — regardless of the time range picked above. Test-rig sessions count too.",
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 0,
+        "y": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#B877D9"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT count(*)::int AS \"sessions today\" FROM sessions WHERE start_ts >= date_trunc('day', now() AT TIME ZONE 'Europe/Stockholm') AT TIME ZONE 'Europe/Stockholm'"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Energy today",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Energy delivered by sessions started since midnight local time (CEST), from the chargers’ own energy meters. A session still running contributes what it has delivered so far.",
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 3,
+        "y": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#B877D9"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT COALESCE(round(sum(kwh)::numeric, 1), 0) AS \"kwh today\" FROM sessions WHERE start_ts >= date_trunc('day', now() AT TIME ZONE 'Europe/Stockholm') AT TIME ZONE 'Europe/Stockholm'"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Avg energy per session",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Average energy delivered per finished session in the selected time range. Sessions still in progress are excluded so the average is not dragged down by half-done charges.",
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 6,
+        "y": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "decimals": 1,
+          "noValue": "No finished sessions",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT round(avg(kwh)::numeric, 1) AS \"avg kWh\" FROM sessions WHERE NOT is_live AND kwh IS NOT NULL AND $__timeFilter(start_ts)"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Avg session length",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Average length of finished sessions in the selected range, measured from a session’s first meter report to its last (this includes the pre-charge handshake of a few minutes). In-progress sessions are excluded.",
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 9,
+        "y": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1,
+          "noValue": "No finished sessions",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT round(avg(dur_s)) AS \"avg seconds\" FROM sessions WHERE NOT is_live AND $__timeFilter(start_ts)"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "piechart",
+      "title": "How sessions ended",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Outcome of each session in the selected range, judged from its power curve. 'Completed' = power tapered off at the end, the normal full-battery finish. 'Stopped early' = the session ended while still drawing hard — cable pulled or stop pressed. 'No charge recorded' = a session that never delivered measurable power (includes the software test rigs, which report no power data, and real cases like a car that plugged in but never started drawing). Sessions still reporting are 'In progress' and get no verdict. Charger hardware faults are tracked on the Operations dashboard.",
+      "gridPos": {
+        "h": 10,
+        "w": 6,
+        "x": 12,
+        "y": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "No sessions in range",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Completed - car tapered off"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#73BF69"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Stopped early - still drawing hard"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FF9830"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "No charge recorded"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8E8E8E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "In progress"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5794F2"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "pieType": "pie",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "values": [
+            "value"
+          ]
+        },
+        "displayLabels": [
+          "percent"
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT CASE WHEN is_live THEN 'In progress' WHEN n_power = 0 OR peak_kw IS NULL OR peak_kw = 0 THEN 'No charge recorded' WHEN tail_kw < 0.10 * peak_kw THEN 'Completed - car tapered off' ELSE 'Stopped early - still drawing hard' END AS \"outcome\", count(*)::int AS \"sessions\" FROM sessions WHERE $__timeFilter(start_ts) GROUP BY 1 ORDER BY 2 DESC"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "bargauge",
+      "title": "Gun utilization",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Share of the selected period each gun spent in an active charging session (including the pre-charge handshake). Small percentages are normal for a site this new — the bar makes growth visible over time.",
+      "gridPos": {
+        "h": 10,
+        "w": 6,
+        "x": 18,
+        "y": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 1,
+          "noValue": "No sessions in range",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#5794F2",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "minVizWidth": 0,
+        "minVizHeight": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT charge_point || ' · ' || CASE connector_id WHEN 1 THEN 'Gun A' WHEN 2 THEN 'Gun B' ELSE 'Conn ' || connector_id END AS \"gun\", round(count(DISTINCT time_bucket('1 minute', ts)) * 100.0 / GREATEST(EXTRACT(EPOCH FROM ($__timeTo()::timestamptz - $__timeFrom()::timestamptz)) / 60, 1), 1) AS \"busy\" FROM meter_samples WHERE transaction_id IS NOT NULL AND $__timeFilter(ts) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "barchart",
+      "title": "Sessions per day",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Charging sessions started on each local day (CEST) in the selected range, across all chargers. Days with no sessions show as zero — a true zero, not missing data.",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 12
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "No sessions in range",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#B877D9"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 78,
+            "gradientMode": "none",
+            "axisSoftMin": 0
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": -45,
+        "xTickLabelSpacing": 100,
+        "xField": "day",
+        "showValue": "auto",
+        "stacking": "none",
+        "groupWidth": 0.7,
+        "barWidth": 0.8,
+        "fullHighlight": false,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT to_char(d.day, 'YYYY-MM-DD') AS \"day\", count(s.start_ts)::int AS \"sessions\" FROM generate_series(date_trunc('day', $__timeFrom() AT TIME ZONE 'Europe/Stockholm'), date_trunc('day', $__timeTo() AT TIME ZONE 'Europe/Stockholm'), interval '1 day') AS d(day) LEFT JOIN sessions s ON date_trunc('day', s.start_ts AT TIME ZONE 'Europe/Stockholm') = d.day GROUP BY d.day ORDER BY d.day"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "barchart",
+      "title": "Energy per day",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Energy delivered per local day (CEST). A session’s energy counts on the day it started. Zero bars are true zeros.",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 12
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "decimals": 1,
+          "noValue": "No sessions in range",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#73BF69"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 78,
+            "gradientMode": "none",
+            "axisSoftMin": 0
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "auto",
+        "xTickLabelRotation": -45,
+        "xTickLabelSpacing": 100,
+        "xField": "day",
+        "showValue": "auto",
+        "stacking": "none",
+        "groupWidth": 0.7,
+        "barWidth": 0.8,
+        "fullHighlight": false,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT to_char(d.day, 'YYYY-MM-DD') AS \"day\", COALESCE(round(sum(s.kwh)::numeric, 1), 0) AS \"kWh\" FROM generate_series(date_trunc('day', $__timeFrom() AT TIME ZONE 'Europe/Stockholm'), date_trunc('day', $__timeTo() AT TIME ZONE 'Europe/Stockholm'), interval '1 day') AS d(day) LEFT JOIN sessions s ON date_trunc('day', s.start_ts AT TIME ZONE 'Europe/Stockholm') = d.day GROUP BY d.day ORDER BY d.day"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "table",
+      "title": "When do cars charge? (weekday × hour)",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Number of sessions started in each hour of the day (columns, local CEST time) per weekday (rows), over the selected range. Brighter cells = more sessions. With the default 7-day range each cell is a single specific day.",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "color-background",
+              "mode": "basic"
+            },
+            "filterable": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "#1F60C4",
+                "value": 1
+              },
+              {
+                "color": "#5794F2",
+                "value": 2
+              },
+              {
+                "color": "#8AB8FF",
+                "value": 3
+              },
+              {
+                "color": "#C0D8FF",
+                "value": 5
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": " ",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "day"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [],
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT CASE d.d WHEN 1 THEN 'Mon' WHEN 2 THEN 'Tue' WHEN 3 THEN 'Wed' WHEN 4 THEN 'Thu' WHEN 5 THEN 'Fri' WHEN 6 THEN 'Sat' ELSE 'Sun' END AS \"day\", count(s.start_ts) FILTER (WHERE s.hh = 0)::int AS \"00\", count(s.start_ts) FILTER (WHERE s.hh = 1)::int AS \"01\", count(s.start_ts) FILTER (WHERE s.hh = 2)::int AS \"02\", count(s.start_ts) FILTER (WHERE s.hh = 3)::int AS \"03\", count(s.start_ts) FILTER (WHERE s.hh = 4)::int AS \"04\", count(s.start_ts) FILTER (WHERE s.hh = 5)::int AS \"05\", count(s.start_ts) FILTER (WHERE s.hh = 6)::int AS \"06\", count(s.start_ts) FILTER (WHERE s.hh = 7)::int AS \"07\", count(s.start_ts) FILTER (WHERE s.hh = 8)::int AS \"08\", count(s.start_ts) FILTER (WHERE s.hh = 9)::int AS \"09\", count(s.start_ts) FILTER (WHERE s.hh = 10)::int AS \"10\", count(s.start_ts) FILTER (WHERE s.hh = 11)::int AS \"11\", count(s.start_ts) FILTER (WHERE s.hh = 12)::int AS \"12\", count(s.start_ts) FILTER (WHERE s.hh = 13)::int AS \"13\", count(s.start_ts) FILTER (WHERE s.hh = 14)::int AS \"14\", count(s.start_ts) FILTER (WHERE s.hh = 15)::int AS \"15\", count(s.start_ts) FILTER (WHERE s.hh = 16)::int AS \"16\", count(s.start_ts) FILTER (WHERE s.hh = 17)::int AS \"17\", count(s.start_ts) FILTER (WHERE s.hh = 18)::int AS \"18\", count(s.start_ts) FILTER (WHERE s.hh = 19)::int AS \"19\", count(s.start_ts) FILTER (WHERE s.hh = 20)::int AS \"20\", count(s.start_ts) FILTER (WHERE s.hh = 21)::int AS \"21\", count(s.start_ts) FILTER (WHERE s.hh = 22)::int AS \"22\", count(s.start_ts) FILTER (WHERE s.hh = 23)::int AS \"23\" FROM generate_series(1, 7) AS d(d) LEFT JOIN (SELECT start_ts, EXTRACT(hour FROM start_ts AT TIME ZONE 'Europe/Stockholm')::int AS hh, EXTRACT(isodow FROM start_ts AT TIME ZONE 'Europe/Stockholm')::int AS dow FROM sessions WHERE $__timeFilter(start_ts)) s ON s.dow = d.d GROUP BY d.d ORDER BY d.d"
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "type": "row",
+      "title": "Deep dives",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "panels": []
+    },
+    {
+      "id": 14,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "options": {
+        "mode": "markdown",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "**Deeper views:** [HYDE · Operations](/grafana/d/hyde-operations) — service health, faults, commands, buffer battery · [OCPP Sessions (lab)](/grafana/d/ocpp-sessions) — every charging session in engineering detail · [OCPP Registry (lab)](/grafana/d/ocpp-registry) — protocol counters, logs & traces\n\n*Times shown in your browser’s timezone; daily totals roll at midnight Central European time (CEST). Data refreshes every minute.*"
+      }
+    }
+  ]
+}

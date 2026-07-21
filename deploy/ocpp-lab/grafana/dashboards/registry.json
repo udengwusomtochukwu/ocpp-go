@@ -1,113 +1,1143 @@
 {
   "uid": "ocpp-registry",
-  "title": "OCPP Registry (lab)",
-  "tags": ["ocpp", "lab"],
+  "title": "HYDE · Registry",
+  "tags": [
+    "hyde",
+    "ocpp",
+    "protocol"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 5,
+  "version": 6,
   "refresh": "5s",
-  "time": { "from": "now-30m", "to": "now" },
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
   "links": [
-    { "asDropdown": false, "icon": "dashboard", "includeVars": false, "keepTime": true, "tags": [], "targetBlank": false, "title": "OCPP Sessions (lab)", "type": "link", "url": "d/ocpp-sessions" }
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "HYDE · Overview",
+      "type": "link",
+      "url": "d/hyde-overview"
+    },
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "HYDE · Operations",
+      "type": "link",
+      "url": "d/hyde-operations"
+    },
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "HYDE · Sessions",
+      "type": "link",
+      "url": "d/ocpp-sessions"
+    }
   ],
-  "templating": { "list": [] },
-  "annotations": { "list": [] },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
   "panels": [
-    { "id": 10, "type": "row", "title": "Fleet", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 } },
-    { "id": 1, "type": "stat", "title": "Chargers connected", "datasource": { "uid": "prometheus" },
-      "gridPos": { "h": 7, "w": 4, "x": 0, "y": 1 },
-      "fieldConfig": { "defaults": { "unit": "none", "thresholds": { "mode": "absolute", "steps": [ { "color": "orange", "value": null }, { "color": "green", "value": 1 } ] } }, "overrides": [] },
-      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
-      "targets": [ { "refId": "A", "expr": "sum(ocpp_chargers_connected) or vector(0)" } ] },
-    { "id": 2, "type": "stat", "title": "Sessions started (30m)", "datasource": { "uid": "prometheus" },
-      "gridPos": { "h": 7, "w": 4, "x": 4, "y": 1 },
-      "fieldConfig": { "defaults": { "unit": "none", "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null } ] } }, "overrides": [] },
-      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
-      "targets": [ { "refId": "A", "expr": "sum(increase(ocpp_transactions_started_total[30m])) or vector(0)" } ] },
-    { "id": 3, "type": "stat", "title": "Energy delivered (30m)", "datasource": { "uid": "prometheus" },
-      "gridPos": { "h": 7, "w": 4, "x": 8, "y": 1 },
-      "fieldConfig": { "defaults": { "unit": "watth", "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] } }, "overrides": [] },
-      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
-      "targets": [ { "refId": "A", "expr": "sum(increase(ocpp_energy_wh_total[30m])) or vector(0)" } ] },
-    { "id": 4, "type": "stat", "title": "Faults (30m)", "datasource": { "uid": "prometheus" },
-      "gridPos": { "h": 7, "w": 4, "x": 12, "y": 1 },
-      "fieldConfig": { "defaults": { "unit": "none", "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [] },
-      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
-      "targets": [ { "refId": "A", "expr": "sum(increase(ocpp_faults_total[30m])) or vector(0)" } ] },
-    { "id": 5, "type": "stat", "title": "CS scrape up", "datasource": { "uid": "prometheus" },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
-      "fieldConfig": { "defaults": { "unit": "none", "mappings": [ { "type": "value", "options": { "1": { "text": "UP", "color": "green" }, "0": { "text": "DOWN", "color": "red" } } } ], "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } }, "overrides": [] },
-      "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"] } },
-      "targets": [ { "refId": "A", "expr": "up{job=\"ocpp-central-system\"}" } ] },
-    { "id": 6, "type": "timeseries", "title": "Chargers connected over time", "datasource": { "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "lineInterpolation": "stepAfter", "fillOpacity": 20, "lineWidth": 2 }, "min": 0 }, "overrides": [] },
-      "targets": [ { "refId": "A", "expr": "sum(ocpp_chargers_connected) or vector(0)", "legendFormat": "connected" } ] },
-    { "id": 7, "type": "timeseries", "title": "Connections + sessions per minute", "datasource": { "uid": "prometheus" },
+    {
+      "id": 900,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "<div style=\"height:100%;display:flex;align-items:flex-end;justify-content:space-between;padding:2px 4px 12px 4px;border-bottom:1px solid rgba(255,255,255,0.14);\"><div><div style=\"font-size:26px;line-height:1;letter-spacing:0.16em;color:#FFFFFF;font-weight:800;font-family:Inter,sans-serif;\">HYDE&nbsp;<span style=\"font-weight:300;color:#9E9E9E;\">REGISTRY</span></div><div style=\"margin-top:7px;font-size:11px;letter-spacing:0.08em;color:#6E6E6E;\">OCPP protocol internals · logs · traces</div></div><span style=\"font-size:10px;letter-spacing:0.22em;color:#3DDC5F;border:1px solid rgba(61,220,95,0.55);border-radius:999px;padding:4px 12px;margin-bottom:2px;white-space:nowrap;\">LIVE DATA</span></div>"
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Fleet",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 3
+      }
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Chargers connected",
+      "datasource": {
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 0,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F5A623",
+                "value": null
+              },
+              {
+                "color": "#3DDC5F",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(ocpp_chargers_connected) or vector(0)"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Sessions started (30m)",
+      "datasource": {
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 4,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#C7C7C7",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(ocpp_transactions_started_total[30m])) or vector(0)"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Energy delivered (30m)",
+      "datasource": {
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 8,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watth",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3DDC5F",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(ocpp_energy_wh_total[30m])) or vector(0)"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Faults (30m)",
+      "datasource": {
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 12,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3DDC5F",
+                "value": null
+              },
+              {
+                "color": "#E5484D",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(ocpp_faults_total[30m])) or vector(0)"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "CS scrape up",
+      "datasource": {
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "UP",
+                  "color": "#3DDC5F"
+                },
+                "0": {
+                  "text": "DOWN",
+                  "color": "#E5484D"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#E5484D",
+                "value": null
+              },
+              {
+                "color": "#3DDC5F",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{job=\"ocpp-central-system\"}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Chargers connected over time",
+      "datasource": {
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 11
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "fillOpacity": 20,
+            "lineWidth": 2
+          },
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3DDC5F"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(ocpp_chargers_connected) or vector(0)",
+          "legendFormat": "connected"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Connections + sessions per minute",
+      "datasource": {
+        "uid": "prometheus"
+      },
       "description": "rate() over $__rate_interval with min step pinned to the 5s scrape interval, so short-lived churn shows at its true height instead of being averaged into a fixed 5m window.",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2 }, "unit": "opm", "min": 0 }, "overrides": [] },
-      "targets": [
-        { "refId": "A", "expr": "sum(rate(ocpp_connections_opened_total[$__rate_interval]))*60", "legendFormat": "conn opened/min", "interval": "5s" },
-        { "refId": "B", "expr": "sum(rate(ocpp_connections_closed_total[$__rate_interval]))*60", "legendFormat": "conn closed/min", "interval": "5s" },
-        { "refId": "C", "expr": "sum(rate(ocpp_transactions_started_total[$__rate_interval]))*60", "legendFormat": "tx started/min", "interval": "5s" },
-        { "refId": "D", "expr": "sum(rate(ocpp_transactions_stopped_total[$__rate_interval]))*60", "legendFormat": "tx stopped/min", "interval": "5s" } ] },
-    { "id": 11, "type": "row", "title": "Protocol activity", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 } },
-    { "id": 8, "type": "timeseries", "title": "Registry events by type (per min)", "datasource": { "uid": "prometheus" },
-      "description": "Fed by ocpp_events_total{type}. Stacked bars use rate() over $__rate_interval with min step = the 5s scrape interval: a fixed [5m] window smeared bursts across neighbouring bars and mis-stacked peaks (Grafana community #82404).",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
-      "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } }, "unit": "opm", "min": 0 }, "overrides": [] },
-      "targets": [ { "refId": "A", "expr": "sum by (type) (rate(ocpp_events_total[$__rate_interval]))*60", "legendFormat": "{{type}}", "interval": "5s" } ] },
-    { "id": 9, "type": "timeseries", "title": "Command results by status (per min)", "datasource": { "uid": "prometheus" },
-      "description": "Fed by ocpp_command_results_total{status}. Stacked bars use rate() over $__rate_interval with min step = the 5s scrape interval: a fixed [5m] window smeared bursts across neighbouring bars and mis-stacked peaks (Grafana community #82404).",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 17 },
-      "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } }, "unit": "opm", "min": 0 }, "overrides": [] },
-      "targets": [ { "refId": "A", "expr": "sum by (status) (rate(ocpp_command_results_total[$__rate_interval]))*60", "legendFormat": "{{status}}", "interval": "5s" } ] },
-    { "id": 12, "type": "timeseries", "title": "Faults by error code (per min)", "datasource": { "uid": "prometheus" },
-      "description": "Fed by ocpp_faults_total{error_code}. Stacked bars use rate() over $__rate_interval with min step = the 5s scrape interval: a fixed [5m] window smeared bursts across neighbouring bars and mis-stacked peaks (Grafana community #82404).",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 25 },
-      "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } }, "unit": "opm", "min": 0 }, "overrides": [] },
-      "targets": [ { "refId": "A", "expr": "sum by (error_code) (rate(ocpp_faults_total[$__rate_interval]))*60", "legendFormat": "{{error_code}}", "interval": "5s" } ] },
-    { "id": 13, "type": "timeseries", "title": "Energy rate (booked at tx stop)", "datasource": { "uid": "prometheus" },
-      "description": "Average delivery power DERIVED from ocpp_energy_wh_total, a counter that only increments when a transaction stops — so it shows bursty after-the-fact spikes, not live power. For true instantaneous power see the 'Charging power' gauge below (direct Power.Active.Import measurand).",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 25 },
-      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 25, "lineWidth": 2 }, "unit": "watt", "min": 0 }, "overrides": [] },
-      "targets": [ { "refId": "A", "expr": "sum(rate(ocpp_energy_wh_total[$__rate_interval]))*3600", "legendFormat": "avg delivery W", "interval": "5s" } ] },
-    { "id": 16, "type": "row", "title": "Charging telemetry (MeterValues measurands)", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 } },
-    { "id": 17, "type": "gauge", "title": "Charging power (instantaneous)", "datasource": { "uid": "prometheus" },
-      "description": "Fed by the Power.Active.Import measurand from MeterValues (ocpp_power_w) — a DIRECT instantaneous reading, not derived from the energy counter via rate() (deriving power from cumulative energy is lossy and laggy — Grafana community #38310). Fleet-wide last report; zeroed when a transaction stops. The example cp sim never sends this measurand, so the gauge stays at 'no charger reporting' until a real charger connects. Scale capped at 22 kW (typical AC max).",
-      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 34 },
-      "fieldConfig": { "defaults": { "unit": "watt", "min": 0, "max": 22000, "noValue": "no charger reporting", "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] } }, "overrides": [] },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "showThresholdLabels": false, "showThresholdMarkers": false },
-      "targets": [ { "refId": "A", "expr": "max(ocpp_power_w)", "legendFormat": "power" } ] },
-    { "id": 18, "type": "timeseries", "title": "Session energy — meter register (live)", "datasource": { "uid": "prometheus" },
-      "description": "Fed by the Energy.Active.Import.Register / Energy.Active.Export.Register measurands from MeterValues (ocpp_energy_register_wh{direction}), streamed live during a transaction — unlike ocpp_energy_wh_total which is only booked at tx stop. The register is cumulative as reported by the charger; a session's energy is the register delta over the session, so subtract endpoints rather than summing samples (Grafana community #111434). The example cp sim sends Export only — expect a single 'export register' series.",
-      "gridPos": { "h": 8, "w": 9, "x": 6, "y": 34 },
-      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "lineInterpolation": "stepAfter", "fillOpacity": 10, "lineWidth": 2 }, "unit": "watth", "min": 0, "noValue": "no meter samples yet" }, "overrides": [] },
-      "targets": [ { "refId": "A", "expr": "max by (direction) (ocpp_energy_register_wh)", "legendFormat": "{{direction}} register" } ] },
-    { "id": 19, "type": "timeseries", "title": "EV state of charge — with daily min/max band", "datasource": { "uid": "prometheus" },
-      "description": "Fed by the SoC measurand from MeterValues (ocpp_soc_percent). Dashed lines + band show the trailing-24h min/max via min_over_time / max_over_time (Grafana community #72123). The example cp sim never sends SoC, so this panel shows no data until a real EV reports it.",
-      "gridPos": { "h": 8, "w": 9, "x": 15, "y": 34 },
-      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 0, "lineWidth": 2 }, "unit": "percent", "min": 0, "max": 100, "noValue": "no SoC samples yet" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 11
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2
+          },
+          "unit": "opm",
+          "min": 0
+        },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "daily max" }, "properties": [
-            { "id": "custom.fillBelowTo", "value": "daily min" },
-            { "id": "custom.lineWidth", "value": 1 },
-            { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [6, 4] } },
-            { "id": "custom.fillOpacity", "value": 12 },
-            { "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } } ] },
-          { "matcher": { "id": "byName", "options": "daily min" }, "properties": [
-            { "id": "custom.lineWidth", "value": 1 },
-            { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [6, 4] } },
-            { "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } } ] } ] },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tx started/min"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3DDC5F"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tx stopped/min"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E6E6E6"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "conn opened/min"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9E9E9E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "conn closed/min"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6E6E6E"
+                }
+              }
+            ]
+          }
+        ]
+      },
       "targets": [
-        { "refId": "A", "expr": "max(ocpp_soc_percent)", "legendFormat": "SoC" },
-        { "refId": "B", "expr": "min(min_over_time(ocpp_soc_percent[1d]))", "legendFormat": "daily min" },
-        { "refId": "C", "expr": "max(max_over_time(ocpp_soc_percent[1d]))", "legendFormat": "daily max" } ] },
-    { "id": 14, "type": "row", "title": "Logs", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 42 } },
-    { "id": 15, "type": "logs", "title": "CS logs (Loki) — click a line's TraceID to jump to the trace", "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 11, "w": 24, "x": 0, "y": 43 },
-      "options": { "showTime": true, "wrapLogMessage": true, "enableLogDetails": true, "sortOrder": "Descending" },
-      "targets": [ { "refId": "A", "datasource": { "type": "loki", "uid": "loki" }, "expr": "{service_name=\"ocpp-central-system\"}" } ] }
-  ]
+        {
+          "refId": "A",
+          "expr": "sum(rate(ocpp_connections_opened_total[$__rate_interval]))*60",
+          "legendFormat": "conn opened/min",
+          "interval": "5s"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(ocpp_connections_closed_total[$__rate_interval]))*60",
+          "legendFormat": "conn closed/min",
+          "interval": "5s"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(rate(ocpp_transactions_started_total[$__rate_interval]))*60",
+          "legendFormat": "tx started/min",
+          "interval": "5s"
+        },
+        {
+          "refId": "D",
+          "expr": "sum(rate(ocpp_transactions_stopped_total[$__rate_interval]))*60",
+          "legendFormat": "tx stopped/min",
+          "interval": "5s"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "row",
+      "title": "Protocol activity",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 19
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Registry events by type (per min)",
+      "datasource": {
+        "uid": "prometheus"
+      },
+      "description": "Fed by ocpp_events_total{type}. Stacked bars use rate() over $__rate_interval with min step = the 5s scrape interval: a fixed [5m] window smeared bursts across neighbouring bars and mis-stacked peaks (Grafana community #82404).",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "opm",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#9E9E9E"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tx.started"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3DDC5F"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tx.stopped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E6E6E6"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "charger.connected"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C7C7C7"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "charger.disconnected"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6E6E6E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "boot"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B5B5B5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "meter"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8A8A8A"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "heartbeat"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5A5A5A"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "status"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#7E7E7E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "command.result"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#A8A8A8"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (type) (rate(ocpp_events_total[$__rate_interval]))*60",
+          "legendFormat": "{{type}}",
+          "interval": "5s"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Command results by status (per min)",
+      "datasource": {
+        "uid": "prometheus"
+      },
+      "description": "Fed by ocpp_command_results_total{status}. Stacked bars use rate() over $__rate_interval with min step = the 5s scrape interval: a fixed [5m] window smeared bursts across neighbouring bars and mis-stacked peaks (Grafana community #82404).",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "opm",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#9E9E9E"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "(?i)^(accepted|unlocked|scheduled|rebootrequired)$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3DDC5F"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "(?i)^(rejected|failed|faulted)$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E5484D"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "(?i)^(notsupported|notimplemented|occupied|blocked)$"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#F5A623"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (status) (rate(ocpp_command_results_total[$__rate_interval]))*60",
+          "legendFormat": "{{status}}",
+          "interval": "5s"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Faults by error code (per min)",
+      "datasource": {
+        "uid": "prometheus"
+      },
+      "description": "Fed by ocpp_faults_total{error_code}. Stacked bars use rate() over $__rate_interval with min step = the 5s scrape interval: a fixed [5m] window smeared bursts across neighbouring bars and mis-stacked peaks (Grafana community #82404).",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "opm",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#E5484D"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (error_code) (rate(ocpp_faults_total[$__rate_interval]))*60",
+          "legendFormat": "{{error_code}}",
+          "interval": "5s"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Energy rate (booked at tx stop)",
+      "datasource": {
+        "uid": "prometheus"
+      },
+      "description": "Average delivery power DERIVED from ocpp_energy_wh_total, a counter that only increments when a transaction stops — so it shows bursty after-the-fact spikes, not live power. For true instantaneous power see the 'Charging power' gauge below (direct Power.Active.Import measurand).",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 25,
+            "lineWidth": 2
+          },
+          "unit": "watt",
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#C7C7C7"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(ocpp_energy_wh_total[$__rate_interval]))*3600",
+          "legendFormat": "avg delivery W",
+          "interval": "5s"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "row",
+      "title": "Charging telemetry (MeterValues measurands)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      }
+    },
+    {
+      "id": 17,
+      "type": "gauge",
+      "title": "Charging power (instantaneous)",
+      "datasource": {
+        "uid": "prometheus"
+      },
+      "description": "Fed by the Power.Active.Import measurand from MeterValues (ocpp_power_w) — a DIRECT instantaneous reading, not derived from the energy counter via rate() (deriving power from cumulative energy is lossy and laggy — Grafana community #38310). Fleet-wide last report; zeroed when a transaction stops. The software sim never sends this measurand, so the gauge reads 'no charger reporting' unless a real charger is on a session. Scale spans the PEAK330-class machine (330 kW max boost; measured session peak so far: 147 kW).",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "min": 0,
+          "max": 350000,
+          "noValue": "no charger reporting",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3DDC5F",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": false
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(ocpp_power_w)",
+          "legendFormat": "power"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Session energy — meter register (live)",
+      "datasource": {
+        "uid": "prometheus"
+      },
+      "description": "Fed by the Energy.Active.Import.Register / Energy.Active.Export.Register measurands from MeterValues (ocpp_energy_register_wh{direction}), streamed live during a transaction — unlike ocpp_energy_wh_total which is only booked at tx stop. The register is cumulative as reported by the charger; a session's energy is the register delta over the session, so subtract endpoints rather than summing samples (Grafana community #111434). The example cp sim sends Export only — expect a single 'export register' series.",
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 6,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "fillOpacity": 10,
+            "lineWidth": 2
+          },
+          "unit": "watth",
+          "min": 0,
+          "noValue": "no meter samples yet"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "import register"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E6E6E6"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "export register"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8A8A8A"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (direction) (ocpp_energy_register_wh)",
+          "legendFormat": "{{direction}} register"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "EV state of charge — with daily min/max band",
+      "datasource": {
+        "uid": "prometheus"
+      },
+      "description": "Fed by the SoC measurand from MeterValues (ocpp_soc_percent). Dashed lines + band show the trailing-24h min/max via min_over_time / max_over_time (Grafana community #72123). The example cp sim never sends SoC, so this panel shows no data until a real EV reports it.",
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 15,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "lineWidth": 2
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "noValue": "no SoC samples yet"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "SoC"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E6E6E6"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "daily max"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8A8A8A"
+                }
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "daily min"
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    6,
+                    4
+                  ]
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 10
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "daily min"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8A8A8A"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    6,
+                    4
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(ocpp_soc_percent)",
+          "legendFormat": "SoC"
+        },
+        {
+          "refId": "B",
+          "expr": "min(min_over_time(ocpp_soc_percent[1d]))",
+          "legendFormat": "daily min"
+        },
+        {
+          "refId": "C",
+          "expr": "max(max_over_time(ocpp_soc_percent[1d]))",
+          "legendFormat": "daily max"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "Logs",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      }
+    },
+    {
+      "id": 15,
+      "type": "logs",
+      "title": "CS logs (Loki) — click a line's TraceID to jump to the trace",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 46
+      },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"ocpp-central-system\"}"
+        }
+      ]
+    }
+  ],
+  "description": "OCPP protocol internals for engineers: registry counters, command outcomes, faults, raw measurand telemetry, and the full backend log with trace links. Product and stakeholder views live on HYDE · Overview and HYDE · Sessions.",
+  "graphTooltip": 1
 }

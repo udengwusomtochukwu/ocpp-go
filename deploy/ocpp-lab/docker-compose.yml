@@ -99,6 +99,10 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=ocpplab
       - GF_USERS_DEFAULT_THEME=dark
+      # HYDE-branded dashboard headers are HTML text panels (bold+light two-tone
+      # word pairs); Grafana sanitizes inline HTML styles unless this is off.
+      # Anonymous role stays Viewer, so panel HTML remains admin-authored only.
+      - GF_PANELS_DISABLE_SANITIZE_HTML=true
     networks:
       - sim
       - dokploy-network

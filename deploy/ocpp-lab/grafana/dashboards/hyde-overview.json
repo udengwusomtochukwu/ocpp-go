@@ -790,7 +790,6 @@
         "defaults": {
           "unit": "short",
           "decimals": 0,
-          "noValue": "No sessions in range",
           "color": {
             "mode": "fixed",
             "fixedColor": "#B877D9"
@@ -857,7 +856,6 @@
         "defaults": {
           "unit": "kwatth",
           "decimals": 1,
-          "noValue": "No sessions in range",
           "color": {
             "mode": "fixed",
             "fixedColor": "#73BF69"
@@ -913,13 +911,23 @@
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "Number of sessions started in each hour of the day (columns, local CEST time) per weekday (rows), over the selected range. Brighter cells = more sessions. With the default 7-day range each cell is a single specific day.",
+      "description": "Number of sessions started in each hour of the day (columns, local CEST time) per weekday (rows), over the selected range. Brighter cells = more sessions; blank cells mean none. The grid auto-focuses: hour columns span only from the first to the last busy hour in range, and weekday rows cover only days the selected range touches (a 24-hour view shows one or two rows, a week shows all seven). With the default 7-day range each cell is a single specific day.",
       "gridPos": {
         "h": 8,
         "w": 24,
         "x": 0,
         "y": 17
       },
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "hour",
+            "rowField": "day",
+            "valueField": "sessions"
+          }
+        }
+      ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -973,7 +981,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "day"
+              "options": "day\\hour"
             },
             "properties": [
               {
@@ -1015,7 +1023,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT CASE d.d WHEN 1 THEN 'Mon' WHEN 2 THEN 'Tue' WHEN 3 THEN 'Wed' WHEN 4 THEN 'Thu' WHEN 5 THEN 'Fri' WHEN 6 THEN 'Sat' ELSE 'Sun' END AS \"day\", count(s.start_ts) FILTER (WHERE s.hh = 0)::int AS \"00\", count(s.start_ts) FILTER (WHERE s.hh = 1)::int AS \"01\", count(s.start_ts) FILTER (WHERE s.hh = 2)::int AS \"02\", count(s.start_ts) FILTER (WHERE s.hh = 3)::int AS \"03\", count(s.start_ts) FILTER (WHERE s.hh = 4)::int AS \"04\", count(s.start_ts) FILTER (WHERE s.hh = 5)::int AS \"05\", count(s.start_ts) FILTER (WHERE s.hh = 6)::int AS \"06\", count(s.start_ts) FILTER (WHERE s.hh = 7)::int AS \"07\", count(s.start_ts) FILTER (WHERE s.hh = 8)::int AS \"08\", count(s.start_ts) FILTER (WHERE s.hh = 9)::int AS \"09\", count(s.start_ts) FILTER (WHERE s.hh = 10)::int AS \"10\", count(s.start_ts) FILTER (WHERE s.hh = 11)::int AS \"11\", count(s.start_ts) FILTER (WHERE s.hh = 12)::int AS \"12\", count(s.start_ts) FILTER (WHERE s.hh = 13)::int AS \"13\", count(s.start_ts) FILTER (WHERE s.hh = 14)::int AS \"14\", count(s.start_ts) FILTER (WHERE s.hh = 15)::int AS \"15\", count(s.start_ts) FILTER (WHERE s.hh = 16)::int AS \"16\", count(s.start_ts) FILTER (WHERE s.hh = 17)::int AS \"17\", count(s.start_ts) FILTER (WHERE s.hh = 18)::int AS \"18\", count(s.start_ts) FILTER (WHERE s.hh = 19)::int AS \"19\", count(s.start_ts) FILTER (WHERE s.hh = 20)::int AS \"20\", count(s.start_ts) FILTER (WHERE s.hh = 21)::int AS \"21\", count(s.start_ts) FILTER (WHERE s.hh = 22)::int AS \"22\", count(s.start_ts) FILTER (WHERE s.hh = 23)::int AS \"23\" FROM generate_series(1, 7) AS d(d) LEFT JOIN (SELECT start_ts, EXTRACT(hour FROM start_ts AT TIME ZONE 'Europe/Stockholm')::int AS hh, EXTRACT(isodow FROM start_ts AT TIME ZONE 'Europe/Stockholm')::int AS dow FROM sessions WHERE $__timeFilter(start_ts)) s ON s.dow = d.d GROUP BY d.d ORDER BY d.d"
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4), b AS (SELECT EXTRACT(isodow FROM start_ts AT TIME ZONE 'Europe/Stockholm')::int AS dow, EXTRACT(hour FROM start_ts AT TIME ZONE 'Europe/Stockholm')::int AS hh FROM sessions WHERE $__timeFilter(start_ts)), rng AS (SELECT DISTINCT EXTRACT(isodow FROM g.d)::int AS dow FROM generate_series(date_trunc('day', $__timeFrom() AT TIME ZONE 'Europe/Stockholm'), date_trunc('day', $__timeTo() AT TIME ZONE 'Europe/Stockholm'), interval '1 day') AS g(d)), hr AS (SELECT generate_series(COALESCE((SELECT min(hh) FROM b), 0), COALESCE((SELECT max(hh) FROM b), 23)) AS h) SELECT CASE rng.dow WHEN 1 THEN 'Mon' WHEN 2 THEN 'Tue' WHEN 3 THEN 'Wed' WHEN 4 THEN 'Thu' WHEN 5 THEN 'Fri' WHEN 6 THEN 'Sat' ELSE 'Sun' END AS \"day\", lpad(hr.h::text, 2, '0') AS \"hour\", count(b.dow)::int AS \"sessions\" FROM rng CROSS JOIN hr LEFT JOIN b ON b.dow = rng.dow AND b.hh = hr.h GROUP BY rng.dow, hr.h ORDER BY rng.dow, hr.h"
         }
       ]
     },

@@ -1,7 +1,7 @@
 {
   "uid": "hyde-operations",
   "title": "HYDE · Operations",
-  "description": "Day-to-day health of the charging lab for the operations team: backend and charger connectivity, freshness of charger reports, session and connection churn, command outcomes, faults with their matching log lines, per-gun service state and the buffer battery. Truth-first: 'No data' means nothing was reported (only counts are zero-filled), sessions are ordered by time (never by transaction id, which resets on redeploys), and in-progress sessions are never given a final verdict. Times display in your browser's timezone (site local time is Central European, CEST). Alert rules live in the Grafana folder 'OCPP Lab' — link at the bottom.",
+  "description": "Day-to-day health of the charging lab for the operations team: backend and charger connectivity, freshness of charger reports, session and connection churn, command outcomes, faults with their matching log lines, per-gun service state and the buffer battery. Truth-first: 'No data' means nothing was reported (only counts are zero-filled), sessions are ordered by time (never by transaction id, which resets on redeploys), and in-progress sessions are never given a final verdict. Times display in your browser's timezone (site local time is Central European, CEST). Alert rules live in the Grafana folder 'OCPP Lab' — link at the bottom. Mode switch: the `mode` variable separates Live hardware from simulators everywhere. Prometheus panels in Live/Simulation cover data from the deploy that introduced the mode label (2026-07-21) onward — older series show only under All. Timescale-backed panels split across ALL history (backfilled).",
   "tags": [
     "hyde",
     "ocpp"
@@ -65,7 +65,42 @@
     }
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "Live",
+          "value": "live"
+        },
+        "description": "Global data mode. Live = real hardware on the LIVE_CHARGER_IDS allowlist; Simulation = every other charge-point id (internal sim, EXT01, test rigs); All = both. Prometheus series recorded before the mode label existed (pre 2026-07-21) only appear under All; Timescale history is backfilled and splits correctly.",
+        "hide": 0,
+        "includeAll": false,
+        "label": "mode",
+        "multi": false,
+        "name": "mode",
+        "options": [
+          {
+            "selected": true,
+            "text": "Live",
+            "value": "live"
+          },
+          {
+            "selected": false,
+            "text": "Simulation",
+            "value": "sim"
+          },
+          {
+            "selected": false,
+            "text": "All",
+            "value": ".*"
+          }
+        ],
+        "query": "Live : live, Simulation : sim, All : .*",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
   },
   "annotations": {
     "list": [
@@ -102,7 +137,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "<div style=\"height:100%;display:flex;align-items:flex-end;justify-content:space-between;padding:2px 4px 12px 4px;border-bottom:1px solid rgba(255,255,255,0.14);\"><div><div style=\"font-size:26px;line-height:1;letter-spacing:0.16em;color:#FFFFFF;font-weight:800;font-family:Inter,sans-serif;\">HYDE&nbsp;<span style=\"font-weight:300;color:#9E9E9E;\">OPERATIONS</span></div><div style=\"margin-top:7px;font-size:11px;letter-spacing:0.08em;color:#8A8A8A;\">Service health · faults · commands · buffer battery</div></div><span style=\"font-size:10px;letter-spacing:0.22em;color:#3DDC5F;border:1px solid rgba(61,220,95,0.55);border-radius:999px;padding:4px 12px;margin-bottom:2px;white-space:nowrap;\">LIVE DATA</span></div>"
+        "content": "<div style=\"height:100%;display:flex;align-items:flex-end;justify-content:space-between;padding:2px 4px 12px 4px;border-bottom:1px solid rgba(255,255,255,0.14);\"><div><div style=\"font-size:26px;line-height:1;letter-spacing:0.16em;color:#FFFFFF;font-weight:800;font-family:Inter,sans-serif;\">HYDE&nbsp;<span style=\"font-weight:300;color:#9E9E9E;\">OPERATIONS</span></div><div style=\"margin-top:7px;font-size:11px;letter-spacing:0.08em;color:#8A8A8A;\">Service health · faults · commands · buffer battery</div></div><style>.hyde-mode[data-mode=\"live\"]{color:#3DDC5F;border-color:rgba(61,220,95,0.55);}.hyde-mode[data-mode=\"live\"]::after{content:\"LIVE DATA\";}.hyde-mode[data-mode=\"sim\"]{color:#F5A623;border-color:rgba(245,166,35,0.55);}.hyde-mode[data-mode=\"sim\"]::after{content:\"SIMULATION\";}.hyde-mode:not([data-mode=\"live\"]):not([data-mode=\"sim\"]){color:#9E9E9E;border-color:rgba(158,158,158,0.55);}.hyde-mode:not([data-mode=\"live\"]):not([data-mode=\"sim\"])::after{content:\"ALL DATA\";}</style><span class=\"hyde-mode\" data-mode=\"${mode}\" style=\"font-size:10px;letter-spacing:0.22em;border:1px solid;border-radius:999px;padding:4px 12px;margin-bottom:2px;white-space:nowrap;\"></span></div>"
       }
     },
     {
@@ -256,7 +291,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(ocpp_chargers_connected) and on() (up{job=\"ocpp-central-system\"} == 1)",
+          "expr": "sum(ocpp_chargers_connected{mode=~\"$mode\"}) and on() (up{job=\"ocpp-central-system\"} == 1)",
           "legendFormat": "online"
         }
       ]
@@ -313,7 +348,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(ocpp_chargers_connected)",
+          "expr": "sum(ocpp_chargers_connected{mode=~\"$mode\"})",
           "legendFormat": "chargers online"
         }
       ]
@@ -411,7 +446,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT charge_point AS \"charge point\", max(ts) AS \"last report\", EXTRACT(EPOCH FROM (now() - max(ts))) AS \"silent for\" FROM meter_samples GROUP BY 1 ORDER BY 2 DESC"
+          "rawSql": "SELECT charge_point AS \"charge point\", max(ts) AS \"last report\", EXTRACT(EPOCH FROM (now() - max(ts))) AS \"silent for\" FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) GROUP BY 1 ORDER BY 2 DESC"
         }
       ]
     },
@@ -534,7 +569,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(ocpp_connections_opened_total[$__rate_interval]))*60",
+          "expr": "sum(rate(ocpp_connections_opened_total{mode=~\"$mode\"}[$__rate_interval]))*60",
           "legendFormat": "connections opened/min",
           "interval": "5s"
         },
@@ -544,7 +579,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(ocpp_connections_closed_total[$__rate_interval]))*60",
+          "expr": "sum(rate(ocpp_connections_closed_total{mode=~\"$mode\"}[$__rate_interval]))*60",
           "legendFormat": "connections closed/min",
           "interval": "5s"
         },
@@ -554,7 +589,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(ocpp_transactions_started_total[$__rate_interval]))*60",
+          "expr": "sum(rate(ocpp_transactions_started_total{mode=~\"$mode\"}[$__rate_interval]))*60",
           "legendFormat": "sessions started/min",
           "interval": "5s"
         },
@@ -564,7 +599,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(ocpp_transactions_stopped_total[$__rate_interval]))*60",
+          "expr": "sum(rate(ocpp_transactions_stopped_total{mode=~\"$mode\"}[$__rate_interval]))*60",
           "legendFormat": "sessions stopped/min",
           "interval": "5s"
         }
@@ -636,7 +671,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "100 * (sum(increase(ocpp_command_results_total{status=~\"(?i)accepted|unlocked|scheduled|rebootrequired\"}[$__range])) or vector(0)) / sum(increase(ocpp_command_results_total[$__range]))",
+          "expr": "100 * (sum(increase(ocpp_command_results_total{status=~\"(?i)accepted|unlocked|scheduled|rebootrequired\",mode=~\"$mode\"}[$__range])) or vector(0)) / sum(increase(ocpp_command_results_total{mode=~\"$mode\"}[$__range]))",
           "legendFormat": "success"
         }
       ]
@@ -738,7 +773,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (status) (rate(ocpp_command_results_total[$__rate_interval]))*60",
+          "expr": "sum by (status) (rate(ocpp_command_results_total{mode=~\"$mode\"}[$__rate_interval]))*60",
           "legendFormat": "{{status}}",
           "interval": "5s"
         }
@@ -816,7 +851,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(increase(ocpp_faults_total[$__range])) or vector(0)",
+          "expr": "sum(increase(ocpp_faults_total{mode=~\"$mode\"}[$__range])) or vector(0)",
           "legendFormat": "faults"
         }
       ]
@@ -888,7 +923,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (error_code) (rate(ocpp_faults_total[$__rate_interval]))*60",
+          "expr": "sum by (error_code) (rate(ocpp_faults_total{mode=~\"$mode\"}[$__rate_interval]))*60",
           "legendFormat": "{{error_code}}",
           "interval": "5s"
         }
@@ -902,7 +937,7 @@
         "type": "loki",
         "uid": "loki"
       },
-      "description": "Backend log lines at warn/error severity plus charger status lines mentioning a fault — the place to find vendor error details (open a line for its full metadata, including the reporting charger). The recurring harmless 'upgrade failed' probe noise (health checks and scanners hitting the websocket port) is filtered out here; the unfiltered stream lives on the OCPP Registry dashboard.",
+      "description": "Backend log lines at warn/error severity plus charger status lines mentioning a fault — the place to find vendor error details (open a line for its full metadata, including the reporting charger). The recurring harmless 'upgrade failed' probe noise (health checks and scanners hitting the websocket port) is filtered out here; the unfiltered stream lives on the OCPP Registry dashboard.\n\nMode filter: charger-attributed log lines follow the Live/Simulation switch; infrastructure lines (no charger id) always show.",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -926,7 +961,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{service_name=\"ocpp-central-system\"} | detected_level =~ `warn|error` != `upgrade failed`",
+          "expr": "{service_name=\"ocpp-central-system\"} | detected_level =~ `warn|error` != `upgrade failed` | mode=~`$mode` or mode=``",
           "queryType": "range",
           "maxLines": 200
         },
@@ -936,7 +971,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{service_name=\"ocpp-central-system\"} | message = `StatusNotification` |~ `(?i)(fault|error)`",
+          "expr": "{service_name=\"ocpp-central-system\"} | message = `StatusNotification` |~ `(?i)(fault|error)` | mode=~`$mode` or mode=``",
           "queryType": "range",
           "maxLines": 100
         }
@@ -1082,7 +1117,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4), act AS (SELECT charge_point, connector_id, max(ts) AS last_any FROM meter_samples GROUP BY 1, 2) SELECT act.charge_point AS \"charge point\", CASE act.connector_id WHEN 1 THEN 'Gun A' WHEN 2 THEN 'Gun B' ELSE 'Conn ' || act.connector_id END AS \"gun\", act.last_any AS \"last report\", max(s.end_ts) AS \"last session\", count(s.start_ts) FILTER (WHERE $__timeFilter(s.start_ts))::int AS \"sessions\", round(sum(s.kwh) FILTER (WHERE $__timeFilter(s.start_ts))::numeric, 1) AS \"kWh\" FROM act LEFT JOIN sessions s USING (charge_point, connector_id) GROUP BY 1, act.connector_id, 3 ORDER BY 1, act.connector_id"
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4), act AS (SELECT charge_point, connector_id, max(ts) AS last_any FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) GROUP BY 1, 2) SELECT act.charge_point AS \"charge point\", CASE act.connector_id WHEN 1 THEN 'Gun A' WHEN 2 THEN 'Gun B' ELSE 'Conn ' || act.connector_id END AS \"gun\", act.last_any AS \"last report\", max(s.end_ts) AS \"last session\", count(s.start_ts) FILTER (WHERE $__timeFilter(s.start_ts))::int AS \"sessions\", round(sum(s.kwh) FILTER (WHERE $__timeFilter(s.start_ts))::numeric, 1) AS \"kWh\" FROM act LEFT JOIN sessions s USING (charge_point, connector_id) GROUP BY 1, act.connector_id, 3 ORDER BY 1, act.connector_id"
         }
       ]
     },
@@ -1174,7 +1209,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT time_bucket('1 minute', ts) AS \"time\", CASE connector_id WHEN 1 THEN 'Gun A side' WHEN 2 THEN 'Gun B side' ELSE 'Connector ' || connector_id END AS metric, avg(value) AS value FROM meter_samples WHERE measurand = 'SoC' AND location = 'Body' AND $__timeFilter(ts) GROUP BY 1, 2 ORDER BY 1"
+          "rawSql": "SELECT time_bucket('1 minute', ts) AS \"time\", CASE connector_id WHEN 1 THEN 'Gun A side' WHEN 2 THEN 'Gun B side' ELSE 'Connector ' || connector_id END AS metric, avg(value) AS value FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND measurand = 'SoC' AND location = 'Body' AND $__timeFilter(ts) GROUP BY 1, 2 ORDER BY 1"
         }
       ]
     },
@@ -1298,7 +1333,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "WITH body AS (SELECT charge_point, time_bucket('15 minutes', ts) AS b, avg(value) AS soc FROM meter_samples WHERE measurand = 'SoC' AND location = 'Body' AND $__timeFilter(ts) GROUP BY 1, 2 HAVING count(DISTINCT connector_id) >= 2), d AS (SELECT charge_point, b, soc, lag(b) OVER (PARTITION BY charge_point ORDER BY b) AS pb, lag(soc) OVER (PARTITION BY charge_point ORDER BY b) AS psoc FROM body), est AS (SELECT charge_point, b, (soc - psoc) / 100.0 * 218 / (EXTRACT(EPOCH FROM (b - pb)) / 3600.0) AS est_kw FROM d WHERE pb IS NOT NULL AND b - pb = interval '15 minutes' AND soc > psoc AND NOT EXISTS (SELECT 1 FROM meter_samples p WHERE p.charge_point = d.charge_point AND p.ts > d.pb AND p.ts <= d.b AND (p.transaction_id IS NOT NULL OR (p.measurand = 'Power.Active.Import' AND p.value * CASE WHEN p.unit = 'kW' THEN 1 WHEN p.unit = 'MW' THEN 1000 ELSE 0.001 END > 0.5)))) SELECT b AS \"time\", charge_point AS metric, round(est_kw::numeric, 1) AS value FROM est WHERE est_kw <= 90 ORDER BY b"
+          "rawSql": "WITH body AS (SELECT charge_point, time_bucket('15 minutes', ts) AS b, avg(value) AS soc FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND measurand = 'SoC' AND location = 'Body' AND $__timeFilter(ts) GROUP BY 1, 2 HAVING count(DISTINCT connector_id) >= 2), d AS (SELECT charge_point, b, soc, lag(b) OVER (PARTITION BY charge_point ORDER BY b) AS pb, lag(soc) OVER (PARTITION BY charge_point ORDER BY b) AS psoc FROM body), est AS (SELECT charge_point, b, (soc - psoc) / 100.0 * 218 / (EXTRACT(EPOCH FROM (b - pb)) / 3600.0) AS est_kw FROM d WHERE pb IS NOT NULL AND b - pb = interval '15 minutes' AND soc > psoc AND NOT EXISTS (SELECT 1 FROM meter_samples p WHERE (CASE WHEN '$mode' = 'live' THEN NOT p.is_sim WHEN '$mode' = 'sim' THEN p.is_sim ELSE true END) AND p.charge_point = d.charge_point AND p.ts > d.pb AND p.ts <= d.b AND (p.transaction_id IS NOT NULL OR (p.measurand = 'Power.Active.Import' AND p.value * CASE WHEN p.unit = 'kW' THEN 1 WHEN p.unit = 'MW' THEN 1000 ELSE 0.001 END > 0.5)))) SELECT b AS \"time\", charge_point AS metric, round(est_kw::numeric, 1) AS value FROM est WHERE est_kw <= 90 ORDER BY b"
         }
       ]
     },
@@ -1355,7 +1390,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH body AS (SELECT charge_point, time_bucket('15 minutes', ts) AS b, avg(value) AS soc FROM meter_samples WHERE measurand = 'SoC' AND location = 'Body' AND ts > now() - interval '30 days' GROUP BY 1, 2 HAVING count(DISTINCT connector_id) >= 2), d AS (SELECT charge_point, b, soc, lag(b) OVER (PARTITION BY charge_point ORDER BY b) AS pb, lag(soc) OVER (PARTITION BY charge_point ORDER BY b) AS psoc FROM body), est AS (SELECT charge_point, b, (soc - psoc) / 100.0 * 218 / (EXTRACT(EPOCH FROM (b - pb)) / 3600.0) AS est_kw FROM d WHERE pb IS NOT NULL AND b - pb = interval '15 minutes' AND soc > psoc AND NOT EXISTS (SELECT 1 FROM meter_samples p WHERE p.charge_point = d.charge_point AND p.ts > d.pb AND p.ts <= d.b AND (p.transaction_id IS NOT NULL OR (p.measurand = 'Power.Active.Import' AND p.value * CASE WHEN p.unit = 'kW' THEN 1 WHEN p.unit = 'MW' THEN 1000 ELSE 0.001 END > 0.5)))) SELECT round(max(est_kw)::numeric, 1) AS \"peak grid draw\" FROM est WHERE est_kw <= 90"
+          "rawSql": "WITH body AS (SELECT charge_point, time_bucket('15 minutes', ts) AS b, avg(value) AS soc FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND measurand = 'SoC' AND location = 'Body' AND ts > now() - interval '30 days' GROUP BY 1, 2 HAVING count(DISTINCT connector_id) >= 2), d AS (SELECT charge_point, b, soc, lag(b) OVER (PARTITION BY charge_point ORDER BY b) AS pb, lag(soc) OVER (PARTITION BY charge_point ORDER BY b) AS psoc FROM body), est AS (SELECT charge_point, b, (soc - psoc) / 100.0 * 218 / (EXTRACT(EPOCH FROM (b - pb)) / 3600.0) AS est_kw FROM d WHERE pb IS NOT NULL AND b - pb = interval '15 minutes' AND soc > psoc AND NOT EXISTS (SELECT 1 FROM meter_samples p WHERE (CASE WHEN '$mode' = 'live' THEN NOT p.is_sim WHEN '$mode' = 'sim' THEN p.is_sim ELSE true END) AND p.charge_point = d.charge_point AND p.ts > d.pb AND p.ts <= d.b AND (p.transaction_id IS NOT NULL OR (p.measurand = 'Power.Active.Import' AND p.value * CASE WHEN p.unit = 'kW' THEN 1 WHEN p.unit = 'MW' THEN 1000 ELSE 0.001 END > 0.5)))) SELECT round(max(est_kw)::numeric, 1) AS \"peak grid draw\" FROM est WHERE est_kw <= 90"
         }
       ]
     }

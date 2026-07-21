@@ -50,7 +50,42 @@
     }
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "Live",
+          "value": "live"
+        },
+        "description": "Global data mode. Live = real hardware on the LIVE_CHARGER_IDS allowlist; Simulation = every other charge-point id (internal sim, EXT01, test rigs); All = both. Prometheus series recorded before the mode label existed (pre 2026-07-21) only appear under All; Timescale history is backfilled and splits correctly.",
+        "hide": 0,
+        "includeAll": false,
+        "label": "mode",
+        "multi": false,
+        "name": "mode",
+        "options": [
+          {
+            "selected": true,
+            "text": "Live",
+            "value": "live"
+          },
+          {
+            "selected": false,
+            "text": "Simulation",
+            "value": "sim"
+          },
+          {
+            "selected": false,
+            "text": "All",
+            "value": ".*"
+          }
+        ],
+        "query": "Live : live, Simulation : sim, All : .*",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
   },
   "annotations": {
     "list": []
@@ -74,7 +109,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "<div style=\"height:100%;display:flex;align-items:flex-end;justify-content:space-between;padding:2px 4px 12px 4px;border-bottom:1px solid rgba(255,255,255,0.14);\"><div><div style=\"font-size:26px;line-height:1;letter-spacing:0.16em;color:#FFFFFF;font-weight:800;font-family:Inter,sans-serif;\">HYDE&nbsp;<span style=\"font-weight:300;color:#9E9E9E;\">REGISTRY</span></div><div style=\"margin-top:7px;font-size:11px;letter-spacing:0.08em;color:#8A8A8A;\">OCPP protocol internals · logs · traces</div></div><span style=\"font-size:10px;letter-spacing:0.22em;color:#3DDC5F;border:1px solid rgba(61,220,95,0.55);border-radius:999px;padding:4px 12px;margin-bottom:2px;white-space:nowrap;\">LIVE DATA</span></div>"
+        "content": "<div style=\"height:100%;display:flex;align-items:flex-end;justify-content:space-between;padding:2px 4px 12px 4px;border-bottom:1px solid rgba(255,255,255,0.14);\"><div><div style=\"font-size:26px;line-height:1;letter-spacing:0.16em;color:#FFFFFF;font-weight:800;font-family:Inter,sans-serif;\">HYDE&nbsp;<span style=\"font-weight:300;color:#9E9E9E;\">REGISTRY</span></div><div style=\"margin-top:7px;font-size:11px;letter-spacing:0.08em;color:#8A8A8A;\">OCPP protocol internals · logs · traces</div></div><style>.hyde-mode[data-mode=\"live\"]{color:#3DDC5F;border-color:rgba(61,220,95,0.55);}.hyde-mode[data-mode=\"live\"]::after{content:\"LIVE DATA\";}.hyde-mode[data-mode=\"sim\"]{color:#F5A623;border-color:rgba(245,166,35,0.55);}.hyde-mode[data-mode=\"sim\"]::after{content:\"SIMULATION\";}.hyde-mode:not([data-mode=\"live\"]):not([data-mode=\"sim\"]){color:#9E9E9E;border-color:rgba(158,158,158,0.55);}.hyde-mode:not([data-mode=\"live\"]):not([data-mode=\"sim\"])::after{content:\"ALL DATA\";}</style><span class=\"hyde-mode\" data-mode=\"${mode}\" style=\"font-size:10px;letter-spacing:0.22em;border:1px solid;border-radius:999px;padding:4px 12px;margin-bottom:2px;white-space:nowrap;\"></span></div>"
       }
     },
     {
@@ -132,7 +167,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(ocpp_chargers_connected) or vector(0)"
+          "expr": "sum(ocpp_chargers_connected{mode=~\"$mode\"}) or vector(0)"
         }
       ]
     },
@@ -176,7 +211,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(ocpp_transactions_started_total[30m])) or vector(0)"
+          "expr": "sum(increase(ocpp_transactions_started_total{mode=~\"$mode\"}[30m])) or vector(0)"
         }
       ]
     },
@@ -220,7 +255,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(ocpp_energy_wh_total[30m])) or vector(0)"
+          "expr": "sum(increase(ocpp_energy_wh_total{mode=~\"$mode\"}[30m])) or vector(0)"
         }
       ]
     },
@@ -268,7 +303,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(ocpp_faults_total[30m])) or vector(0)"
+          "expr": "sum(increase(ocpp_faults_total{mode=~\"$mode\"}[30m])) or vector(0)"
         }
       ]
     },
@@ -366,7 +401,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(ocpp_chargers_connected) or vector(0)",
+          "expr": "sum(ocpp_chargers_connected{mode=~\"$mode\"}) or vector(0)",
           "legendFormat": "connected"
         }
       ]
@@ -461,25 +496,25 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(ocpp_connections_opened_total[$__rate_interval]))*60",
+          "expr": "sum(rate(ocpp_connections_opened_total{mode=~\"$mode\"}[$__rate_interval]))*60",
           "legendFormat": "conn opened/min",
           "interval": "5s"
         },
         {
           "refId": "B",
-          "expr": "sum(rate(ocpp_connections_closed_total[$__rate_interval]))*60",
+          "expr": "sum(rate(ocpp_connections_closed_total{mode=~\"$mode\"}[$__rate_interval]))*60",
           "legendFormat": "conn closed/min",
           "interval": "5s"
         },
         {
           "refId": "C",
-          "expr": "sum(rate(ocpp_transactions_started_total[$__rate_interval]))*60",
+          "expr": "sum(rate(ocpp_transactions_started_total{mode=~\"$mode\"}[$__rate_interval]))*60",
           "legendFormat": "tx started/min",
           "interval": "5s"
         },
         {
           "refId": "D",
-          "expr": "sum(rate(ocpp_transactions_stopped_total[$__rate_interval]))*60",
+          "expr": "sum(rate(ocpp_transactions_stopped_total{mode=~\"$mode\"}[$__rate_interval]))*60",
           "legendFormat": "tx stopped/min",
           "interval": "5s"
         }
@@ -592,13 +627,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (type) (rate(ocpp_events_total{type=~\"heartbeat|meter|status\"}[$__rate_interval]))*60",
+          "expr": "sum by (type) (rate(ocpp_events_total{type=~\"heartbeat|meter|status\",mode=~\"$mode\"}[$__rate_interval]))*60",
           "legendFormat": "{{type}}",
           "interval": "5s"
         },
         {
           "refId": "B",
-          "expr": "sum(rate(ocpp_events_total{type!~\"heartbeat|meter|status\"}[$__rate_interval]))*60",
+          "expr": "sum(rate(ocpp_events_total{type!~\"heartbeat|meter|status\",mode=~\"$mode\"}[$__rate_interval]))*60",
           "legendFormat": "other",
           "interval": "5s"
         }
@@ -685,7 +720,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (status) (rate(ocpp_command_results_total[$__rate_interval]))*60",
+          "expr": "sum by (status) (rate(ocpp_command_results_total{mode=~\"$mode\"}[$__rate_interval]))*60",
           "legendFormat": "{{status}}",
           "interval": "5s"
         }
@@ -742,7 +777,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (error_code) (rate(ocpp_faults_total[$__rate_interval]))*60",
+          "expr": "sum by (error_code) (rate(ocpp_faults_total{mode=~\"$mode\"}[$__rate_interval]))*60",
           "legendFormat": "{{error_code}}",
           "interval": "5s"
         }
@@ -781,7 +816,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(ocpp_energy_wh_total[$__rate_interval]))*3600",
+          "expr": "sum(rate(ocpp_energy_wh_total{mode=~\"$mode\"}[$__rate_interval]))*3600",
           "legendFormat": "avg delivery W",
           "interval": "5s"
         }
@@ -842,7 +877,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max(ocpp_power_w)",
+          "expr": "max(ocpp_power_w{mode=~\"$mode\"})",
           "legendFormat": "power"
         }
       ]
@@ -909,7 +944,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (direction) (ocpp_energy_register_wh)",
+          "expr": "max by (direction) (ocpp_energy_register_wh{mode=~\"$mode\"})",
           "legendFormat": "{{direction}} register"
         }
       ]
@@ -1027,17 +1062,17 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max(ocpp_soc_percent)",
+          "expr": "max(ocpp_soc_percent{mode=~\"$mode\"})",
           "legendFormat": "SoC"
         },
         {
           "refId": "B",
-          "expr": "min(min_over_time(ocpp_soc_percent[1d]))",
+          "expr": "min(min_over_time(ocpp_soc_percent{mode=~\"$mode\"}[1d]))",
           "legendFormat": "daily min"
         },
         {
           "refId": "C",
-          "expr": "max(max_over_time(ocpp_soc_percent[1d]))",
+          "expr": "max(max_over_time(ocpp_soc_percent{mode=~\"$mode\"}[1d]))",
           "legendFormat": "daily max"
         }
       ]
@@ -1080,11 +1115,12 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{service_name=\"ocpp-central-system\"}"
+          "expr": "{service_name=\"ocpp-central-system\"} | mode=~`$mode` or mode=``"
         }
-      ]
+      ],
+      "description": "Mode filter: charger-attributed log lines follow the Live/Simulation switch; infrastructure lines (no charger id) always show."
     }
   ],
-  "description": "OCPP protocol internals for engineers: registry counters, command outcomes, faults, raw measurand telemetry, and the full backend log with trace links. Product and stakeholder views live on HYDE · Overview and HYDE · Sessions.",
+  "description": "OCPP protocol internals for engineers: registry counters, command outcomes, faults, raw measurand telemetry, and the full backend log with trace links. Product and stakeholder views live on HYDE · Overview and HYDE · Sessions. Mode switch: the `mode` variable separates Live hardware from simulators everywhere. Prometheus panels in Live/Simulation cover data from the deploy that introduced the mode label (2026-07-21) onward — older series show only under All. Timescale-backed panels split across ALL history (backfilled).",
   "graphTooltip": 1
 }

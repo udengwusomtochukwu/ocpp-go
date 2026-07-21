@@ -240,9 +240,9 @@ func main() {
 			st.online = true
 			st.connectedAt = time.Now()
 		})
-		onConnect() // hyde/lab: registry metrics
+		onConnect(id) // hyde/lab: registry metrics (mode-labelled)
 		bus.Publish(Event{Type: "charger.connected", Charger: id})
-		log.WithField("client", id).Info("new charge point connected")
+		log.WithFields(logrus.Fields{"client": id, "mode": modeOf(id)}).Info("new charge point connected")
 		go exampleRoutine(id, handler)
 		// Populate the config cache shortly after boot settles.
 		go func() {
@@ -255,9 +255,9 @@ func main() {
 	centralSystem.SetChargePointDisconnectedHandler(func(chargePoint ocpp16.ChargePointConnection) {
 		id := chargePoint.ID()
 		handler.update(id, func(st *ChargePointState) { st.online = false })
-		onDisconnect() // hyde/lab: registry metrics
+		onDisconnect(id) // hyde/lab: registry metrics (mode-labelled)
 		bus.Publish(Event{Type: "charger.disconnected", Charger: id})
-		log.WithField("client", id).Info("charge point disconnected")
+		log.WithFields(logrus.Fields{"client": id, "mode": modeOf(id)}).Info("charge point disconnected")
 	})
 	ocppj.SetLogger(log.WithField("logger", "ocppj"))
 	ws.SetLogger(log.WithField("logger", "websocket"))
@@ -267,6 +267,9 @@ func main() {
 	// hyde/lab: OTLP trace export (push) to the OTel Collector -> Jaeger
 	stopTracing := startTracing()
 	defer stopTracing()
+	// hyde/lab: LIVE vs SIM data separation — everything not on this allowlist
+	// is classified as a simulator on every signal plane (see mode.go).
+	log.Infof("mode: live charger allowlist = %v — everything else is sim", liveIDList())
 	// hyde/lab: OTel/Prometheus registry metrics on /metrics
 	startMetrics()
 	// hyde/lab: REST + SSE surface (registry, commands, events) on API_PORT

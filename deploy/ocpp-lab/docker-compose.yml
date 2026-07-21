@@ -1,8 +1,12 @@
 # hyde/lab — isolated ocpp-go 1.6 evaluation lab.
-# Self-contained loop: the charge-point sim auto-dials the central system
-# over the internal `sim` network. No DB, no external dependencies.
 #
-# Local:   docker compose -f deploy/ocpp-lab/docker-compose.yml up --build
+# LIVE vs SIM: the internal charge-point sim sits behind the "sim" compose
+# profile, so a plain `up` (what Dokploy runs) does NOT start it — the
+# deployed stack only talks to real hardware unless a sim connects
+# externally. To run the sim locally:
+#   docker-compose -f deploy/ocpp-lab/docker-compose.yml --profile sim up --build
+#
+# Local (no sim): docker-compose -f deploy/ocpp-lab/docker-compose.yml up --build
 # Dokploy: deployed as a Compose service; a domain is attached to the
 #          central-system service on port 8887 (TLS terminated at Traefik).
 #
@@ -25,6 +29,7 @@ services:
       - API_PORT=8080                  # REST/SSE surface (Traefik path route /api)
       - PUBLIC_WS_URL=wss://ocpp-lab.hydecharge.com  # advertised charger endpoint
       - TSDB_DSN=postgres://ocpplab:ocpplab@timescale:5432/ocpplab?sslmode=disable  # raw meter samples -> Timescale
+      - LIVE_CHARGER_IDS=A2111LHE0212606001  # allowlist: real hardware; every other id is classified sim
     depends_on:
       timescale:
         condition: service_started
@@ -34,7 +39,11 @@ services:
       - dokploy-network
     tty: true
 
+  # Internal simulator — OFF by default (profile "sim"): Dokploy's plain
+  # `up` skips profiled services, so the deployed stack runs no always-on
+  # sim polluting live data. Opt in locally with `--profile sim`.
   charge-point:
+    profiles: ["sim"]
     depends_on:
       central-system:
         condition: service_started

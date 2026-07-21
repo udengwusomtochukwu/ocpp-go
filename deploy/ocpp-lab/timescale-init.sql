@@ -16,8 +16,14 @@ CREATE TABLE IF NOT EXISTS meter_samples (
     phase          text             NOT NULL DEFAULT '',
     location       text             NOT NULL DEFAULT '',
     unit           text             NOT NULL DEFAULT '',
-    value          double precision NOT NULL
+    value          double precision NOT NULL,
+    is_sim         boolean          -- live/sim separation; NULL only on rows
+                                    -- predating the column (backfilled at CS
+                                    -- boot against LIVE_CHARGER_IDS)
 );
+
+-- Pre-existing volumes converge to the same shape (tsdb.go re-runs this).
+ALTER TABLE meter_samples ADD COLUMN IF NOT EXISTS is_sim boolean;
 
 SELECT create_hypertable('meter_samples', 'ts', if_not_exists => TRUE);
 

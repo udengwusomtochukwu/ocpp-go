@@ -45,6 +45,7 @@ type meterSample struct {
 	location      string
 	unit          string
 	value         float64
+	isSim         bool // false = allowlisted live hardware (see mode.go)
 }
 
 var tsdbCh chan meterSample // nil = writer disabled
@@ -63,11 +64,15 @@ var tsdbSchema = []string{
 		phase          text             NOT NULL DEFAULT '',
 		location       text             NOT NULL DEFAULT '',
 		unit           text             NOT NULL DEFAULT '',
-		value          double precision NOT NULL
+		value          double precision NOT NULL,
+		is_sim         boolean
 	)`,
 	`SELECT create_hypertable('meter_samples', 'ts', if_not_exists => TRUE)`,
 	`CREATE INDEX IF NOT EXISTS meter_samples_cp_tx_ts_idx
 		ON meter_samples (charge_point, transaction_id, ts DESC)`,
+	// Live/sim separation (mode.go): pre-existing volumes gain the column
+	// here; tsdbBackfillMode then classifies historical rows once.
+	`ALTER TABLE meter_samples ADD COLUMN IF NOT EXISTS is_sim boolean`,
 }
 
 // tsdbPolicies are lifecycle knobs (compress after 7 days, drop after 90 —
@@ -116,6 +121,7 @@ func tsdbEnqueue(chargePointID string, txID int, req *core.MeterValuesRequest) {
 	if req.TransactionId != nil {
 		txID = *req.TransactionId
 	}
+	isSim := !isLive(chargePointID)
 	for _, mv := range req.MeterValue {
 		ts := time.Now()
 		if mv.Timestamp != nil {
@@ -135,6 +141,7 @@ func tsdbEnqueue(chargePointID string, txID int, req *core.MeterValuesRequest) {
 				ts: ts, chargePoint: chargePointID, connectorID: req.ConnectorId,
 				transactionID: txID, measurand: measurand, phase: string(sv.Phase),
 				location: string(sv.Location), unit: string(sv.Unit), value: v,
+				isSim: isSim,
 			}
 			select {
 			case tsdbCh <- sample:
@@ -156,6 +163,7 @@ func tsdbWriter(pool *pgxpool.Pool) {
 		}
 		break
 	}
+	tsdbBackfillMode(pool)
 	tsdbApplyPolicies(pool)
 	log.Info("tsdb: timescale meter-sample writer started")
 	batch := make([]meterSample, 0, tsdbBatchMax)
@@ -175,6 +183,26 @@ func tsdbWriter(pool *pgxpool.Pool) {
 				batch = batch[:0]
 			}
 		}
+	}
+}
+
+// tsdbBackfillMode classifies rows that predate the is_sim column against
+// the current allowlist (mode.go). Idempotent — only NULL rows are touched,
+// so it converges to a no-op after the first successful run. Best-effort:
+// a failure (e.g. DML rejected on an already-compressed chunk by an older
+// TimescaleDB) degrades to "history stays unclassified", never to no writer.
+func tsdbBackfillMode(pool *pgxpool.Pool) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	tag, err := pool.Exec(ctx,
+		`UPDATE meter_samples SET is_sim = (charge_point <> ALL($1::text[])) WHERE is_sim IS NULL`,
+		liveIDList())
+	if err != nil {
+		log.Warnf("tsdb: is_sim backfill skipped (will retry next boot): %v", err)
+		return
+	}
+	if n := tag.RowsAffected(); n > 0 {
+		log.Infof("tsdb: backfilled is_sim on %d historical samples", n)
 	}
 }
 
@@ -211,9 +239,9 @@ func tsdbFlush(pool *pgxpool.Pool, rows []meterSample) {
 			tx = s.transactionID
 		}
 		b.Queue(`INSERT INTO meter_samples
-			(ts, charge_point, connector_id, transaction_id, measurand, phase, location, unit, value)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			s.ts, s.chargePoint, s.connectorID, tx, s.measurand, s.phase, s.location, s.unit, s.value)
+			(ts, charge_point, connector_id, transaction_id, measurand, phase, location, unit, value, is_sim)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+			s.ts, s.chargePoint, s.connectorID, tx, s.measurand, s.phase, s.location, s.unit, s.value, s.isSim)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

@@ -80,6 +80,7 @@ components:
         ocpp: { type: string, example: "OCPP 1.6J" }
         capabilities: { type: array, items: { type: string } }
         status: { type: string, enum: [online, charging, offline, faulted] }
+        simulated: { type: boolean, description: "true unless the charge-point id is on the LIVE_CHARGER_IDS allowlist (real hardware)" }
         endpoint: { type: string, example: "wss://ocpp-lab.hydecharge.com/CP42" }
         lastHeartbeat: { type: string, example: "4s ago" }
         lastBoot: { type: string, example: "13 Jul 14:02" }

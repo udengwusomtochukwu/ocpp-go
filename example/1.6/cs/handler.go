@@ -154,8 +154,8 @@ func (handler *CentralSystemHandler) OnMeterValues(chargePointId string, request
 		st.pushTrace("in", request.GetFeatureName(),
 			fmt.Sprintf("connector %d · %s %s", request.ConnectorId, sampleVal, sampleUnit))
 	})
-	recordMeterValues(request)                // power / energy-register / SoC gauges by measurand
-	tsdbEnqueue(chargePointId, txID, request) // raw per-session samples -> TimescaleDB
+	recordMeterValues(chargePointId, request) // power / energy-register / SoC gauges by measurand (mode-labelled)
+	tsdbEnqueue(chargePointId, txID, request) // raw per-session samples -> TimescaleDB (is_sim-flagged)
 	bus.Publish(Event{Type: "meter", Charger: chargePointId, Data: map[string]any{
 		"connectorId": request.ConnectorId, "value": sampleVal, "unit": sampleUnit,
 	}})
@@ -312,5 +312,7 @@ func (handler *CentralSystemHandler) OnLogStatusNotification(chargingStationID s
 // Utility functions
 
 func logDefault(chargePointId string, feature string) *logrus.Entry {
-	return log.WithFields(logrus.Fields{"client": chargePointId, "message": feature})
+	// mode rides along as a logrus field -> OTLP attribute -> Loki structured
+	// metadata, so log panels can follow the same live/sim switch as metrics.
+	return log.WithFields(logrus.Fields{"client": chargePointId, "message": feature, "mode": modeOf(chargePointId)})
 }

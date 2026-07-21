@@ -85,6 +85,7 @@ type restCharger struct {
 	Ocpp              string          `json:"ocpp"`
 	Capabilities      []string        `json:"capabilities"`
 	Status            string          `json:"status"` // online|charging|offline|faulted
+	Simulated         bool            `json:"simulated"` // additive: true unless on the LIVE_CHARGER_IDS allowlist
 	Endpoint          string          `json:"endpoint"`
 	LastHeartbeat     string          `json:"lastHeartbeat"`
 	LastBoot          string          `json:"lastBoot"`
@@ -261,6 +262,7 @@ func project(id string, st *ChargePointState) restCharger {
 		Ocpp:         "OCPP 1.6J",
 		Capabilities: []string{"Remote start/stop", "Smart charging", "Remote trigger"},
 		Status:       status,
+		Simulated:    !isLive(id),
 		Endpoint:     publicWsBase() + "/" + id,
 		LastHeartbeat: humanizeSince(st.lastSeen),
 		LastBoot:      fmtDay(st.lastBoot),

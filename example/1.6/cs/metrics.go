@@ -23,6 +23,12 @@ import (
 // exporter, so the same instrument is idiomatic OTel *and* scrapeable by
 // Prometheus. Charge-point id is deliberately NOT a label — it is
 // high-cardinality and belongs on traces/logs, not metric series.
+//
+// Every instrument additionally carries a `mode` label ("live"|"sim", see
+// mode.go) so dashboards can separate real hardware from simulators. Two
+// values — cardinality-safe. Series recorded before this label existed stay
+// mode-less in Prometheus history; mode-filtered panels only cover data from
+// the deploy that introduced it onward.
 const (
 	envVarMetricsPort  = "METRICS_PORT"
 	defaultMetricsPort = "2112"
@@ -47,8 +53,23 @@ var (
 	mPower     metric.Float64Gauge // ocpp_power_w        <- Power.Active.Import
 	mEnergyReg metric.Float64Gauge // ocpp_energy_register_wh{direction} <- Energy.Active.*.Register
 	mSoC       metric.Float64Gauge // ocpp_soc_percent    <- SoC
-	powerSeen  atomic.Bool         // true once any Power.Active.Import sample arrived
+	// power-seen flags are per mode: the gauge is zeroed at tx stop only for
+	// the mode series that ever reported power, so live/sim stay independent.
+	powerSeenLive atomic.Bool
+	powerSeenSim  atomic.Bool
 )
+
+// modeAttr is the low-cardinality live/sim label attached to every metric.
+func modeAttr(chargePointID string) attribute.KeyValue {
+	return attribute.String("mode", modeOf(chargePointID))
+}
+
+func powerSeenFlag(chargePointID string) *atomic.Bool {
+	if isLive(chargePointID) {
+		return &powerSeenLive
+	}
+	return &powerSeenSim
+}
 
 // startMetrics wires an OTel meter to a Prometheus exporter and serves
 // /metrics on METRICS_PORT (default 2112). Safe no-op if init fails.
@@ -107,33 +128,34 @@ func recordEvent(ev Event) {
 		return
 	}
 	ctx := context.Background()
-	mEvents.Add(ctx, 1, metric.WithAttributes(attribute.String("type", ev.Type)))
+	mode := modeAttr(ev.Charger)
+	mEvents.Add(ctx, 1, metric.WithAttributes(attribute.String("type", ev.Type), mode))
 	switch ev.Type {
 	case "tx.started":
-		mTxStart.Add(ctx, 1)
+		mTxStart.Add(ctx, 1, metric.WithAttributes(mode))
 	case "tx.stopped":
-		mTxStop.Add(ctx, 1)
+		mTxStop.Add(ctx, 1, metric.WithAttributes(mode))
 		if wh, ok := ev.Data["energyWh"].(int); ok && wh > 0 {
-			mEnergyWh.Add(ctx, int64(wh))
+			mEnergyWh.Add(ctx, int64(wh), metric.WithAttributes(mode))
 		}
 		// Chargers stop streaming MeterValues after StopTransaction, which
 		// would freeze the power gauge at its last in-charge value. Zero it —
-		// but only if power was ever reported, so a charger that never sends
-		// Power.Active.Import keeps the gauge honestly empty (no series)
-		// instead of a fabricated 0.
-		if powerSeen.Load() {
-			mPower.Record(ctx, 0)
+		// but only if power was ever reported on this mode's series, so a
+		// charger that never sends Power.Active.Import keeps the gauge
+		// honestly empty (no series) instead of a fabricated 0.
+		if powerSeenFlag(ev.Charger).Load() {
+			mPower.Record(ctx, 0, metric.WithAttributes(mode))
 		}
 	case "status":
 		if code, _ := ev.Data["errorCode"].(string); code != "" && code != "NoError" {
-			mFaults.Add(ctx, 1, metric.WithAttributes(attribute.String("error_code", code)))
+			mFaults.Add(ctx, 1, metric.WithAttributes(attribute.String("error_code", code), mode))
 		}
 	case "command.result":
 		status, _ := ev.Data["status"].(string)
 		if status == "" {
 			status = "unknown"
 		}
-		mCommands.Add(ctx, 1, metric.WithAttributes(attribute.String("status", status)))
+		mCommands.Add(ctx, 1, metric.WithAttributes(attribute.String("status", status), mode))
 	}
 }
 
@@ -142,11 +164,12 @@ func recordEvent(ev Event) {
 // Called from OnMeterValues. Per OCPP 1.6, a SampledValue with no Measurand
 // means Energy.Active.Import.Register. Phase-qualified samples (L1/L2/…) are
 // skipped so per-phase readings don't overwrite the aggregate value.
-func recordMeterValues(req *core.MeterValuesRequest) {
+func recordMeterValues(chargePointID string, req *core.MeterValuesRequest) {
 	if mPower == nil {
 		return
 	}
 	ctx := context.Background()
+	mode := modeAttr(chargePointID)
 	for _, mv := range req.MeterValue {
 		for _, sv := range mv.SampledValue {
 			if sv.Phase != "" {
@@ -158,16 +181,16 @@ func recordMeterValues(req *core.MeterValuesRequest) {
 			}
 			switch sv.Measurand {
 			case types.MeasurandPowerActiveImport:
-				powerSeen.Store(true)
-				mPower.Record(ctx, scaleToBase(v, sv.Unit))
+				powerSeenFlag(chargePointID).Store(true)
+				mPower.Record(ctx, scaleToBase(v, sv.Unit), metric.WithAttributes(mode))
 			case types.MeasurandEnergyActiveImportRegister, "":
 				mEnergyReg.Record(ctx, scaleToBase(v, sv.Unit),
-					metric.WithAttributes(attribute.String("direction", "import")))
+					metric.WithAttributes(attribute.String("direction", "import"), mode))
 			case types.MeasurandEnergyActiveExportRegister:
 				mEnergyReg.Record(ctx, scaleToBase(v, sv.Unit),
-					metric.WithAttributes(attribute.String("direction", "export")))
+					metric.WithAttributes(attribute.String("direction", "export"), mode))
 			case types.MeasurandSoC:
-				mSoC.Record(ctx, v)
+				mSoC.Record(ctx, v, metric.WithAttributes(mode))
 			}
 		}
 	}
@@ -184,21 +207,25 @@ func scaleToBase(v float64, unit types.UnitOfMeasure) float64 {
 }
 
 // onConnect / onDisconnect are called from the CS connection-lifecycle
-// handlers. They hide the context so the callsites stay one-liners.
-func onConnect() {
+// handlers. They hide the context so the callsites stay one-liners. The
+// connected gauge is an UpDownCounter: adding ±1 with the mode attribute
+// keeps an independent live count per mode series.
+func onConnect(chargePointID string) {
 	if mConnected == nil {
 		return
 	}
 	ctx := context.Background()
-	mConnected.Add(ctx, 1)
-	mOpened.Add(ctx, 1)
+	mode := metric.WithAttributes(modeAttr(chargePointID))
+	mConnected.Add(ctx, 1, mode)
+	mOpened.Add(ctx, 1, mode)
 }
 
-func onDisconnect() {
+func onDisconnect(chargePointID string) {
 	if mConnected == nil {
 		return
 	}
 	ctx := context.Background()
-	mConnected.Add(ctx, -1)
-	mClosed.Add(ctx, 1)
+	mode := metric.WithAttributes(modeAttr(chargePointID))
+	mConnected.Add(ctx, -1, mode)
+	mClosed.Add(ctx, 1, mode)
 }

@@ -783,44 +783,9 @@
                 "value": null
               }
             ]
-          },
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#B08D57"
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/Gun A$/"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#C7C9CB"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/Gun B$/"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#6B87A8"
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "options": {
         "reduceOptions": {
@@ -849,12 +814,6 @@
           "rawQuery": true,
           "rawSql": "SELECT charge_point || ' · ' || CASE connector_id WHEN 1 THEN 'Gun A' WHEN 2 THEN 'Gun B' ELSE 'Conn ' || connector_id END AS \"gun\", round(count(DISTINCT time_bucket('1 minute', ts)) * 100.0 / GREATEST(EXTRACT(EPOCH FROM ($__timeTo()::timestamptz - $__timeFrom()::timestamptz)) / 60, 1), 1) AS \"busy\" FROM meter_samples WHERE transaction_id IS NOT NULL AND $__timeFilter(ts) GROUP BY 1 ORDER BY 1"
         }
-      ],
-      "transformations": [
-        {
-          "id": "rowsToFields",
-          "options": {}
-        }
       ]
     },
     {
@@ -878,7 +837,7 @@
           "decimals": 0,
           "color": {
             "mode": "fixed",
-            "fixedColor": "#C7C9CB"
+            "fixedColor": "#C7C7C7"
           },
           "custom": {
             "lineWidth": 1,

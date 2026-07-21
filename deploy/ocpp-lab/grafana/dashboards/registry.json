@@ -292,13 +292,13 @@
             {
               "type": "value",
               "options": {
-                "0": {
-                  "text": "DOWN",
-                  "color": "#E5484D"
-                },
                 "1": {
                   "text": "UP",
                   "color": "#3DDC5F"
+                },
+                "0": {
+                  "text": "DOWN",
+                  "color": "#E5484D"
                 }
               }
             }
@@ -406,7 +406,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#B08D57"
+                  "fixedColor": "#3DDC5F"
                 }
               }
             ]
@@ -421,7 +421,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#8A8A8A"
+                  "fixedColor": "#E6E6E6"
                 }
               }
             ]
@@ -436,7 +436,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#C7C9CB"
+                  "fixedColor": "#9E9E9E"
                 }
               }
             ]
@@ -451,7 +451,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#6B87A8"
+                  "fixedColor": "#6E6E6E"
                 }
               }
             ]
@@ -503,7 +503,7 @@
       "datasource": {
         "uid": "prometheus"
       },
-      "description": "Fed by ocpp_events_total{type}. The three high-frequency plumbing types (heartbeat, meter, status) get their own series; everything else — boots, connects/disconnects, session starts/stops, command results — is collapsed into a single \"other\" series to keep the panel readable (max 5 hues). Session start/stop rates have their own panel above. Stacked bars use rate() over $__rate_interval with min step = the 5s scrape interval.",
+      "description": "Fed by ocpp_events_total{type}. Stacked bars use rate() over $__rate_interval with min step = the 5s scrape interval: a fixed [5m] window smeared bursts across neighbouring bars and mis-stacked peaks (Grafana community #82404).",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -523,21 +523,81 @@
           "min": 0,
           "color": {
             "mode": "fixed",
-            "fixedColor": "#C7C9CB"
+            "fixedColor": "#9E9E9E"
           }
         },
         "overrides": [
           {
             "matcher": {
               "id": "byName",
-              "options": "heartbeat"
+              "options": "tx.started"
             },
             "properties": [
               {
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#C7C9CB"
+                  "fixedColor": "#3DDC5F"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tx.stopped"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#E6E6E6"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "charger.connected"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C7C7C7"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "charger.disconnected"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6E6E6E"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "boot"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#B5B5B5"
                 }
               }
             ]
@@ -552,7 +612,22 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#6B87A8"
+                  "fixedColor": "#8A8A8A"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "heartbeat"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#5A5A5A"
                 }
               }
             ]
@@ -567,7 +642,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#B08D57"
+                  "fixedColor": "#7E7E7E"
                 }
               }
             ]
@@ -575,14 +650,14 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "other"
+              "options": "command.result"
             },
             "properties": [
               {
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#8A8A8A"
+                  "fixedColor": "#A8A8A8"
                 }
               }
             ]
@@ -592,14 +667,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (type) (rate(ocpp_events_total{type=~\"heartbeat|meter|status\"}[$__rate_interval]))*60",
+          "expr": "sum by (type) (rate(ocpp_events_total[$__rate_interval]))*60",
           "legendFormat": "{{type}}",
-          "interval": "5s"
-        },
-        {
-          "refId": "B",
-          "expr": "sum(rate(ocpp_events_total{type!~\"heartbeat|meter|status\"}[$__rate_interval]))*60",
-          "legendFormat": "other",
           "interval": "5s"
         }
       ]
@@ -631,7 +700,7 @@
           "min": 0,
           "color": {
             "mode": "fixed",
-            "fixedColor": "#C7C9CB"
+            "fixedColor": "#9E9E9E"
           }
         },
         "overrides": [
@@ -698,7 +767,7 @@
       "datasource": {
         "uid": "prometheus"
       },
-      "description": "Fed by ocpp_faults_total{error_code}. Stacked bars use rate() over $__rate_interval with min step = the 5s scrape interval: a fixed [5m] window smeared bursts across neighbouring bars and mis-stacked peaks (Grafana community #82404). Known codes wear the neutral finish palette; unseen codes render alert-red until classified.",
+      "description": "Fed by ocpp_faults_total{error_code}. Stacked bars use rate() over $__rate_interval with min step = the 5s scrape interval: a fixed [5m] window smeared bursts across neighbouring bars and mis-stacked peaks (Grafana community #82404).",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -721,23 +790,7 @@
             "fixedColor": "#E5484D"
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "OtherError"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#C7C9CB"
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "targets": [
         {
@@ -773,7 +826,7 @@
           "min": 0,
           "color": {
             "mode": "fixed",
-            "fixedColor": "#C7C9CB"
+            "fixedColor": "#C7C7C7"
           }
         },
         "overrides": []
@@ -884,7 +937,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#C7C9CB"
+                  "fixedColor": "#E6E6E6"
                 }
               }
             ]
@@ -899,7 +952,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#6B87A8"
+                  "fixedColor": "#8A8A8A"
                 }
               }
             ]
@@ -951,7 +1004,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#C7C9CB"
+                  "fixedColor": "#E6E6E6"
                 }
               }
             ]

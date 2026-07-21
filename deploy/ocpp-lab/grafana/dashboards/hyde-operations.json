@@ -465,7 +465,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#B08D57"
+                  "fixedColor": "#3DDC5F"
                 }
               }
             ]
@@ -480,7 +480,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#8A8A8A"
+                  "fixedColor": "#E6E6E6"
                 }
               }
             ]
@@ -495,7 +495,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#C7C9CB"
+                  "fixedColor": "#9E9E9E"
                 }
               }
             ]
@@ -510,7 +510,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#6B87A8"
+                  "fixedColor": "#6E6E6E"
                 }
               }
             ]
@@ -670,7 +670,7 @@
           },
           "color": {
             "mode": "fixed",
-            "fixedColor": "#C7C9CB"
+            "fixedColor": "#9E9E9E"
           }
         },
         "overrides": [
@@ -830,7 +830,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Charger fault reports broken down by their error code. The vendor-specific detail code, when a charger sends one, is visible in the matching log line on the right. Known codes wear the neutral finish palette; a code not seen before renders alert-red until classified.",
+      "description": "Charger fault reports broken down by their error code. The vendor-specific detail code, when a charger sends one, is visible in the matching log line on the right.",
       "gridPos": {
         "h": 8,
         "w": 8,
@@ -853,23 +853,7 @@
             "fixedColor": "#E5484D"
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "OtherError"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#C7C9CB"
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "options": {
         "legend": {
@@ -993,30 +977,6 @@
               {
                 "id": "custom.width",
                 "value": 70
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text"
-                }
-              },
-              {
-                "id": "mappings",
-                "value": [
-                  {
-                    "type": "value",
-                    "options": {
-                      "Gun A": {
-                        "color": "#C7C9CB",
-                        "index": 0
-                      },
-                      "Gun B": {
-                        "color": "#6B87A8",
-                        "index": 1
-                      }
-                    }
-                  }
-                ]
               }
             ]
           },
@@ -1133,7 +1093,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#C7C9CB"
+                  "fixedColor": "#E6E6E6"
                 }
               }
             ]
@@ -1148,7 +1108,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#6B87A8"
+                  "fixedColor": "#8A8A8A"
                 }
               }
             ]

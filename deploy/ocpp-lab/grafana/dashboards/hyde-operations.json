@@ -291,7 +291,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(ocpp_chargers_connected{mode=~\"$mode\"}) and on() (up{job=\"ocpp-central-system\"} == 1)",
+          "expr": "(sum(ocpp_chargers_connected{mode=~\"$mode\"}) or vector(0)) and on() (up{job=\"ocpp-central-system\"} == 1)",
           "legendFormat": "online"
         }
       ]
@@ -348,7 +348,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(ocpp_chargers_connected{mode=~\"$mode\"})",
+          "expr": "sum(ocpp_chargers_connected{mode=~\"$mode\"}) or vector(0)",
           "legendFormat": "chargers online"
         }
       ]

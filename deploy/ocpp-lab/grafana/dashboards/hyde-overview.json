@@ -4,14 +4,15 @@
   "description": "The charging service at a glance — what is happening right now, and what the last days delivered. Built for any audience: no protocol knowledge needed. Every number comes straight from the chargers' own meter reports stored in the lab database; nothing is simulated or padded, so a panel saying 'no data' means exactly that. Sessions still running are labelled 'in progress' and never judged. Times display in your browser's timezone; daily totals roll over at midnight Central European time (CEST). Deep-dive dashboards are linked at the bottom.",
   "tags": [
     "hyde",
-    "ocpp"
+    "ocpp",
+    "lab"
   ],
   "timezone": "browser",
   "weekStart": "monday",
   "graphTooltip": 1,
   "editable": true,
   "schemaVersion": 39,
-  "version": 2,
+  "version": 1,
   "fiscalYearStartMonth": 0,
   "refresh": "1m",
   "time": {
@@ -37,7 +38,7 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": false,
-      "title": "HYDE · Sessions",
+      "title": "OCPP Sessions (lab)",
       "type": "link",
       "url": "d/ocpp-sessions"
     },
@@ -48,7 +49,7 @@
       "keepTime": true,
       "tags": [],
       "targetBlank": false,
-      "title": "HYDE · Registry",
+      "title": "OCPP Registry (lab)",
       "type": "link",
       "url": "d/ocpp-registry"
     }
@@ -74,27 +75,6 @@
   },
   "panels": [
     {
-      "id": 900,
-      "type": "text",
-      "title": "",
-      "transparent": true,
-      "gridPos": {
-        "h": 3,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "options": {
-        "mode": "html",
-        "code": {
-          "language": "plaintext",
-          "showLineNumbers": false,
-          "showMiniMap": false
-        },
-        "content": "<div style=\"height:100%;display:flex;align-items:flex-end;justify-content:space-between;padding:2px 4px 12px 4px;border-bottom:1px solid rgba(255,255,255,0.14);\"><div><div style=\"font-size:26px;line-height:1;letter-spacing:0.16em;color:#FFFFFF;font-weight:800;font-family:Inter,sans-serif;\">HYDE&nbsp;<span style=\"font-weight:300;color:#9E9E9E;\">OVERVIEW</span></div><div style=\"margin-top:7px;font-size:11px;letter-spacing:0.08em;color:#6E6E6E;\">Battery-buffered fast charging — live from the site</div></div><span style=\"font-size:10px;letter-spacing:0.22em;color:#3DDC5F;border:1px solid rgba(61,220,95,0.55);border-radius:999px;padding:4px 12px;margin-bottom:2px;white-space:nowrap;\">LIVE DATA</span></div>"
-      }
-    },
-    {
       "id": 100,
       "type": "row",
       "title": "Right now",
@@ -103,7 +83,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 3
+        "y": 0
       },
       "panels": []
     },
@@ -120,7 +100,7 @@
         "h": 5,
         "w": 4,
         "x": 0,
-        "y": 4
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -131,11 +111,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#F5A623",
+                "color": "orange",
                 "value": null
               },
               {
-                "color": "#3DDC5F",
+                "color": "green",
                 "value": 1
               }
             ]
@@ -185,7 +165,7 @@
         "h": 5,
         "w": 4,
         "x": 4,
-        "y": 4
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -199,7 +179,7 @@
                 "value": null
               },
               {
-                "color": "#3DDC5F",
+                "color": "green",
                 "value": 1
               }
             ]
@@ -250,7 +230,7 @@
         "h": 5,
         "w": 4,
         "x": 8,
-        "y": 4
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -306,7 +286,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 4
+        "y": 1
       },
       "fieldConfig": {
         "defaults": {
@@ -318,15 +298,15 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#E5484D",
+                "color": "red",
                 "value": null
               },
               {
-                "color": "#F5A623",
+                "color": "orange",
                 "value": 20
               },
               {
-                "color": "#3DDC5F",
+                "color": "green",
                 "value": 50
               }
             ]
@@ -372,7 +352,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 6
       },
       "panels": []
     },
@@ -389,7 +369,7 @@
         "h": 5,
         "w": 3,
         "x": 0,
-        "y": 17
+        "y": 7
       },
       "fieldConfig": {
         "defaults": {
@@ -397,7 +377,7 @@
           "decimals": 0,
           "color": {
             "mode": "fixed",
-            "fixedColor": "#FFFFFF"
+            "fixedColor": "#B877D9"
           }
         },
         "overrides": []
@@ -445,7 +425,7 @@
         "h": 5,
         "w": 3,
         "x": 3,
-        "y": 17
+        "y": 7
       },
       "fieldConfig": {
         "defaults": {
@@ -453,7 +433,7 @@
           "decimals": 1,
           "color": {
             "mode": "fixed",
-            "fixedColor": "#FFFFFF"
+            "fixedColor": "#B877D9"
           }
         },
         "overrides": []
@@ -501,7 +481,7 @@
         "h": 5,
         "w": 3,
         "x": 6,
-        "y": 17
+        "y": 7
       },
       "fieldConfig": {
         "defaults": {
@@ -558,7 +538,7 @@
         "h": 5,
         "w": 3,
         "x": 9,
-        "y": 17
+        "y": 7
       },
       "fieldConfig": {
         "defaults": {
@@ -615,7 +595,7 @@
         "h": 10,
         "w": 6,
         "x": 12,
-        "y": 17
+        "y": 7
       },
       "fieldConfig": {
         "defaults": {
@@ -623,8 +603,7 @@
           "decimals": 0,
           "noValue": "No sessions in range",
           "color": {
-            "mode": "fixed",
-            "fixedColor": "#6E6E6E"
+            "mode": "palette-classic"
           },
           "mappings": []
         },
@@ -639,7 +618,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#3DDC5F"
+                  "fixedColor": "#73BF69"
                 }
               }
             ]
@@ -654,7 +633,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#F5A623"
+                  "fixedColor": "#FF9830"
                 }
               }
             ]
@@ -669,7 +648,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#8A8A8A"
+                  "fixedColor": "#8E8E8E"
                 }
               }
             ]
@@ -684,7 +663,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#FFFFFF"
+                  "fixedColor": "#5794F2"
                 }
               }
             ]
@@ -742,7 +721,7 @@
         "h": 10,
         "w": 6,
         "x": 18,
-        "y": 17
+        "y": 7
       },
       "fieldConfig": {
         "defaults": {
@@ -755,7 +734,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "#3DDC5F",
+                "color": "#5794F2",
                 "value": null
               }
             ]
@@ -805,7 +784,7 @@
         "h": 5,
         "w": 6,
         "x": 0,
-        "y": 22
+        "y": 12
       },
       "fieldConfig": {
         "defaults": {
@@ -813,7 +792,7 @@
           "decimals": 0,
           "color": {
             "mode": "fixed",
-            "fixedColor": "#C7C7C7"
+            "fixedColor": "#B877D9"
           },
           "custom": {
             "lineWidth": 1,
@@ -871,7 +850,7 @@
         "h": 5,
         "w": 6,
         "x": 6,
-        "y": 22
+        "y": 12
       },
       "fieldConfig": {
         "defaults": {
@@ -879,7 +858,7 @@
           "decimals": 1,
           "color": {
             "mode": "fixed",
-            "fixedColor": "#3DDC5F"
+            "fixedColor": "#73BF69"
           },
           "custom": {
             "lineWidth": 1,
@@ -925,6 +904,88 @@
       ]
     },
     {
+      "id": 15,
+      "type": "marcusolsson-calendar-panel",
+      "title": "Session calendar — drag days to filter",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Every charging session as a calendar entry (gun + energy). This is also a filter: click-drag across days — or use the toolbar views — to set the whole dashboard’s time range; every panel follows. The calendar tracks the dashboard range, so widen the range picker to see further back.",
+      "gridPos": {
+        "h": 11,
+        "w": 6,
+        "x": 0,
+        "y": 17
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#B877D9"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#B877D9",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "annotations": false,
+        "annotationsLimit": 100,
+        "annotationsType": "",
+        "colors": "event",
+        "dateFormat": "inherit",
+        "defaultView": "month",
+        "descriptionField": [
+          "charge point"
+        ],
+        "displayFields": [
+          "description",
+          "text",
+          "time"
+        ],
+        "endTimeField": "end",
+        "locationLabel": "",
+        "preformattedDescription": false,
+        "quickLinks": false,
+        "scrollToTime": {
+          "hours": 0,
+          "minutes": 0
+        },
+        "showEventTooltip": true,
+        "showMonthTime": false,
+        "textField": "session",
+        "timeField": "time",
+        "timeRangeType": "default",
+        "views": [
+          "day",
+          "week",
+          "month",
+          "agenda"
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT start_ts AS \"time\", end_ts AS \"end\", CASE connector_id WHEN 1 THEN 'Gun A' WHEN 2 THEN 'Gun B' ELSE 'Conn ' || connector_id END || COALESCE(' · ' || round(kwh::numeric, 1) || ' kWh', '') AS \"session\", charge_point AS \"charge point\" FROM sessions WHERE $__timeFilter(start_ts) ORDER BY start_ts"
+        }
+      ]
+    },
+    {
       "id": 13,
       "type": "table",
       "title": "When do cars charge? (weekday × hour)",
@@ -932,12 +993,12 @@
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "Number of sessions started in each hour of the day (columns, local CEST time) per weekday (rows), over the selected range. Brighter cells = more sessions; blank cells mean none. The grid auto-focuses: hour columns span only from the first to the last busy hour in range, and weekday rows cover only days the selected range touches (a 24-hour view shows one or two rows, a week shows all seven). With the default 7-day range each cell is a single specific day.",
+      "description": "Number of sessions started in each hour of the day (columns, 00–23 local CEST time) per weekday (rows), over the selected range. Brighter cells = more sessions; blank cells are true zeros. Weekday rows cover only days the selected range touches (a 24-hour view shows one or two rows, a week all seven). With the default 7-day range each cell is a single specific day.",
       "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 27
+        "h": 11,
+        "w": 18,
+        "x": 6,
+        "y": 17
       },
       "transformations": [
         {
@@ -959,7 +1020,8 @@
               "type": "color-background",
               "mode": "basic"
             },
-            "filterable": false
+            "filterable": false,
+            "minWidth": 40
           },
           "thresholds": {
             "mode": "absolute",
@@ -969,19 +1031,19 @@
                 "value": null
               },
               {
-                "color": "#1C4A28",
+                "color": "#1F60C4",
                 "value": 1
               },
               {
-                "color": "#2A7A3E",
+                "color": "#5794F2",
                 "value": 2
               },
               {
-                "color": "#35B04F",
+                "color": "#8AB8FF",
                 "value": 3
               },
               {
-                "color": "#3DDC5F",
+                "color": "#C0D8FF",
                 "value": 5
               }
             ]
@@ -1007,7 +1069,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 70
+                "value": 52
               },
               {
                 "id": "custom.cellOptions",
@@ -1044,7 +1106,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4), b AS (SELECT EXTRACT(isodow FROM start_ts AT TIME ZONE 'Europe/Stockholm')::int AS dow, EXTRACT(hour FROM start_ts AT TIME ZONE 'Europe/Stockholm')::int AS hh FROM sessions WHERE $__timeFilter(start_ts)), rng AS (SELECT DISTINCT EXTRACT(isodow FROM g.d)::int AS dow FROM generate_series(date_trunc('day', $__timeFrom() AT TIME ZONE 'Europe/Stockholm'), date_trunc('day', $__timeTo() AT TIME ZONE 'Europe/Stockholm'), interval '1 day') AS g(d)), hr AS (SELECT generate_series(COALESCE((SELECT min(hh) FROM b), 0), COALESCE((SELECT max(hh) FROM b), 23)) AS h) SELECT CASE rng.dow WHEN 1 THEN 'Mon' WHEN 2 THEN 'Tue' WHEN 3 THEN 'Wed' WHEN 4 THEN 'Thu' WHEN 5 THEN 'Fri' WHEN 6 THEN 'Sat' ELSE 'Sun' END AS \"day\", lpad(hr.h::text, 2, '0') AS \"hour\", count(b.dow)::int AS \"sessions\" FROM rng CROSS JOIN hr LEFT JOIN b ON b.dow = rng.dow AND b.hh = hr.h GROUP BY rng.dow, hr.h ORDER BY rng.dow, hr.h"
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4), b AS (SELECT EXTRACT(isodow FROM start_ts AT TIME ZONE 'Europe/Stockholm')::int AS dow, EXTRACT(hour FROM start_ts AT TIME ZONE 'Europe/Stockholm')::int AS hh FROM sessions WHERE $__timeFilter(start_ts)), rng AS (SELECT DISTINCT EXTRACT(isodow FROM g.d)::int AS dow FROM generate_series(date_trunc('day', $__timeFrom() AT TIME ZONE 'Europe/Stockholm'), date_trunc('day', $__timeTo() AT TIME ZONE 'Europe/Stockholm'), interval '1 day') AS g(d)), hr AS (SELECT generate_series(0, 23) AS h) SELECT CASE rng.dow WHEN 1 THEN 'Mon' WHEN 2 THEN 'Tue' WHEN 3 THEN 'Wed' WHEN 4 THEN 'Thu' WHEN 5 THEN 'Fri' WHEN 6 THEN 'Sat' ELSE 'Sun' END AS \"day\", lpad(hr.h::text, 2, '0') AS \"hour\", count(b.dow)::int AS \"sessions\" FROM rng CROSS JOIN hr LEFT JOIN b ON b.dow = rng.dow AND b.hh = hr.h GROUP BY rng.dow, hr.h ORDER BY rng.dow, hr.h"
         }
       ]
     },
@@ -1057,7 +1119,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 28
       },
       "panels": []
     },
@@ -1070,7 +1132,7 @@
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 29
       },
       "options": {
         "mode": "markdown",
@@ -1079,256 +1141,8 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "**Deeper views:** [HYDE · Operations](/grafana/d/hyde-operations) — service health, faults, commands, buffer battery · [HYDE · Sessions](/grafana/d/ocpp-sessions) — every charging session in engineering detail · [HYDE · Registry](/grafana/d/ocpp-registry) — protocol counters, logs & traces\n\n*Times shown in your browser's timezone; daily totals roll at midnight Central European time (CEST). Data refreshes every minute. Panels marked 'est.' are derived estimates — method in each panel's ⓘ description.*"
+        "content": "**Deeper views:** [HYDE · Operations](/grafana/d/hyde-operations) — service health, faults, commands, buffer battery · [OCPP Sessions (lab)](/grafana/d/ocpp-sessions) — every charging session in engineering detail · [OCPP Registry (lab)](/grafana/d/ocpp-registry) — protocol counters, logs & traces\n\n*Times shown in your browser’s timezone; daily totals roll at midnight Central European time (CEST). Data refreshes every minute.*"
       }
-    },
-    {
-      "id": 103,
-      "type": "row",
-      "title": "The grid advantage — measured on site",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 9
-      },
-      "panels": []
-    },
-    {
-      "id": 30,
-      "type": "stat",
-      "title": "Grid leverage (30 d)",
-      "datasource": {
-        "type": "postgres",
-        "uid": "timescale"
-      },
-      "description": "DERIVED ESTIMATE — the battery-buffer effect in one number: the highest power delivered to a car in the last 30 days ÷ the 43 kW (63 A) nominal grid connection of this PEAK330-class unit. 3.4× means a car charged 3.4 times faster than the grid feed alone could sustain — the buffer supplied the rest. Method: max in-session Power.Active.Import ÷ 43 kW; the live-measured refill ceiling (~43.6 kW) confirms the 43 kW basis.",
-      "gridPos": {
-        "h": 6,
-        "w": 5,
-        "x": 0,
-        "y": 10
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "suffix:×",
-          "decimals": 1,
-          "noValue": "No sessions yet",
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#3DDC5F"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "percentChangeColorMode": "standard",
-        "text": {
-          "valueSize": 72
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "postgres",
-            "uid": "timescale"
-          },
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT round((max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) / 43.0)::numeric, 1) AS \"grid leverage\" FROM meter_samples WHERE measurand = 'Power.Active.Import' AND transaction_id IS NOT NULL AND ts > now() - interval '30 days'"
-        }
-      ]
-    },
-    {
-      "id": 31,
-      "type": "stat",
-      "title": "Peak grid draw (30 d, est.)",
-      "datasource": {
-        "type": "postgres",
-        "uid": "timescale"
-      },
-      "description": "DERIVED ESTIMATE — the charger exposes no grid-side meter over OCPP, so grid intake is inferred from buffer-battery physics: the rise of the internal 218 kWh buffer's state of charge between two ~15-minute reports × 218 kWh ÷ elapsed time = the power the grid fed into the buffer. Only idle/refill intervals count — anything overlapping a car-charging session or a report gap over 30 minutes is excluded, and nothing is interpolated. Cross-check: the measured ceiling (~43.6 kW) matches the unit's configured 63 A feed (√3 × 400 V × 63 A = 43.6 kW). This 30-day peak is the number a demand charge would bill on. A conventional unbuffered 330 kW charger would need the grid to stand behind its full output instead.",
-      "gridPos": {
-        "h": 6,
-        "w": 5,
-        "x": 5,
-        "y": 10
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "kwatt",
-          "decimals": 1,
-          "noValue": "No refill intervals yet",
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#FFFFFF"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "percentChangeColorMode": "standard"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "postgres",
-            "uid": "timescale"
-          },
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "WITH body AS (SELECT charge_point, time_bucket('15 minutes', ts) AS b, avg(value) AS soc FROM meter_samples WHERE measurand = 'SoC' AND location = 'Body' AND ts > now() - interval '30 days' GROUP BY 1, 2), d AS (SELECT charge_point, b, soc, lag(b) OVER (PARTITION BY charge_point ORDER BY b) AS pb, lag(soc) OVER (PARTITION BY charge_point ORDER BY b) AS psoc FROM body), est AS (SELECT charge_point, b, (soc - psoc) / 100.0 * 218 / (EXTRACT(EPOCH FROM (b - pb)) / 3600.0) AS est_kw FROM d WHERE pb IS NOT NULL AND b - pb <= interval '30 minutes' AND soc > psoc AND NOT EXISTS (SELECT 1 FROM meter_samples p WHERE p.charge_point = d.charge_point AND p.measurand = 'Power.Active.Import' AND p.value * CASE WHEN p.unit = 'kW' THEN 1 WHEN p.unit = 'MW' THEN 1000 ELSE 0.001 END > 0.5 AND p.ts > d.pb AND p.ts <= d.b)) SELECT round(max(est_kw)::numeric, 1) AS \"peak grid draw\" FROM est"
-        }
-      ]
-    },
-    {
-      "id": 32,
-      "type": "stat",
-      "title": "Boost energy available now",
-      "datasource": {
-        "type": "postgres",
-        "uid": "timescale"
-      },
-      "description": "DERIVED ESTIMATE — buffer state of charge × the 218 kWh usable buffer of a PEAK330-class unit, summed across chargers that report a buffer. Energy standing ready to boost fast charging beyond the grid feed, from the latest ~15-minute buffer report (sides averaged per unit).",
-      "gridPos": {
-        "h": 6,
-        "w": 5,
-        "x": 10,
-        "y": 10
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "kwatth",
-          "decimals": 0,
-          "noValue": "No recent buffer report",
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#3DDC5F"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "percentChangeColorMode": "standard"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "postgres",
-            "uid": "timescale"
-          },
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT round(sum(unit_kwh)::numeric, 0) AS \"boost energy\" FROM (SELECT charge_point, avg(last_soc) / 100.0 * 218 AS unit_kwh FROM (SELECT charge_point, connector_id, last(value, ts) AS last_soc FROM meter_samples WHERE measurand = 'SoC' AND location = 'Body' AND ts > now() - interval '2 hours' GROUP BY 1, 2) s GROUP BY 1) u"
-        }
-      ]
-    },
-    {
-      "id": 33,
-      "type": "timeseries",
-      "title": "Grid draw while the buffer refills (est.)",
-      "datasource": {
-        "type": "postgres",
-        "uid": "timescale"
-      },
-      "description": "DERIVED ESTIMATE — the charger exposes no grid-side meter over OCPP, so grid intake is inferred from buffer-battery physics: the rise of the internal 218 kWh buffer's state of charge between two ~15-minute reports × 218 kWh ÷ elapsed time = the power the grid fed into the buffer. Only idle/refill intervals count — anything overlapping a car-charging session or a report gap over 30 minutes is excluded, and nothing is interpolated. Cross-check: the measured ceiling (~43.6 kW) matches the unit's configured 63 A feed (√3 × 400 V × 63 A = 43.6 kW). Bars appear only for refill intervals; an empty stretch means the buffer was full or a car was charging. This is the effektavgift (demand-charge) story: the site never asks the grid for more than its small feed.",
-      "gridPos": {
-        "h": 6,
-        "w": 9,
-        "x": 15,
-        "y": 10
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "kwatt",
-          "min": 0,
-          "decimals": 1,
-          "noValue": "No refill intervals in range",
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#3DDC5F"
-          },
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 0,
-            "fillOpacity": 65,
-            "gradientMode": "none",
-            "spanNulls": false,
-            "axisSoftMax": 50,
-            "barAlignment": -1
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "postgres",
-            "uid": "timescale"
-          },
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "WITH body AS (SELECT charge_point, time_bucket('15 minutes', ts) AS b, avg(value) AS soc FROM meter_samples WHERE measurand = 'SoC' AND location = 'Body' AND $__timeFilter(ts) GROUP BY 1, 2), d AS (SELECT charge_point, b, soc, lag(b) OVER (PARTITION BY charge_point ORDER BY b) AS pb, lag(soc) OVER (PARTITION BY charge_point ORDER BY b) AS psoc FROM body), est AS (SELECT charge_point, b, (soc - psoc) / 100.0 * 218 / (EXTRACT(EPOCH FROM (b - pb)) / 3600.0) AS est_kw FROM d WHERE pb IS NOT NULL AND b - pb <= interval '30 minutes' AND soc > psoc AND NOT EXISTS (SELECT 1 FROM meter_samples p WHERE p.charge_point = d.charge_point AND p.measurand = 'Power.Active.Import' AND p.value * CASE WHEN p.unit = 'kW' THEN 1 WHEN p.unit = 'MW' THEN 1000 ELSE 0.001 END > 0.5 AND p.ts > d.pb AND p.ts <= d.b)) SELECT b AS \"time\", charge_point AS metric, round(est_kw::numeric, 1) AS value FROM est ORDER BY b"
-        }
-      ]
     }
   ]
 }

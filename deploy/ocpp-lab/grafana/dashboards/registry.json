@@ -611,7 +611,7 @@
       "datasource": {
         "uid": "prometheus"
       },
-      "description": "Fed by ocpp_command_results_total{status}. Stacked bars use rate() over $__rate_interval with min step = the 5s scrape interval: a fixed [5m] window smeared bursts across neighbouring bars and mis-stacked peaks (Grafana community #82404).",
+      "description": "Fed by ocpp_command_results_total{status}. Stacked bars use rate() over $__rate_interval with min step = the 5s scrape interval: a fixed [5m] window smeared bursts across neighbouring bars and mis-stacked peaks (Grafana community #82404). Finish-palette rule: bronze is excluded from the categorical rotation on any panel where alert-red can appear (fault codes, command statuses) — fallback order Silver → Steel → Graphite; burgundy (unused today) requires a CVD check against alert-red before ever appearing near alerts.",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -698,7 +698,7 @@
       "datasource": {
         "uid": "prometheus"
       },
-      "description": "Fed by ocpp_faults_total{error_code}. Stacked bars use rate() over $__rate_interval with min step = the 5s scrape interval: a fixed [5m] window smeared bursts across neighbouring bars and mis-stacked peaks (Grafana community #82404). Known codes wear the neutral finish palette; unseen codes render alert-red until classified.",
+      "description": "Fed by ocpp_faults_total{error_code}. Stacked bars use rate() over $__rate_interval with min step = the 5s scrape interval: a fixed [5m] window smeared bursts across neighbouring bars and mis-stacked peaks (Grafana community #82404). Known codes wear the neutral finish palette; unseen codes render alert-red until classified. Finish-palette rule: bronze is excluded from the categorical rotation on any panel where alert-red can appear (fault codes, command statuses) — fallback order Silver → Steel → Graphite; burgundy (unused today) requires a CVD check against alert-red before ever appearing near alerts.",
       "gridPos": {
         "h": 8,
         "w": 12,

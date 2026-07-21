@@ -650,7 +650,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Every command response from the chargers, broken down by the status they answered (Accepted, Rejected, NotSupported, …). Empty panel = no commands were sent in the range.",
+      "description": "Every command response from the chargers, broken down by the status they answered (Accepted, Rejected, NotSupported, …). Empty panel = no commands were sent in the range. Finish-palette rule: bronze is excluded from the categorical rotation on any panel where alert-red can appear (fault codes, command statuses) — fallback order Silver → Steel → Graphite; burgundy (unused today) requires a CVD check against alert-red before ever appearing near alerts.",
       "gridPos": {
         "h": 8,
         "w": 8,
@@ -830,7 +830,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Charger fault reports broken down by their error code. The vendor-specific detail code, when a charger sends one, is visible in the matching log line on the right. Known codes wear the neutral finish palette; a code not seen before renders alert-red until classified.",
+      "description": "Charger fault reports broken down by their error code. The vendor-specific detail code, when a charger sends one, is visible in the matching log line on the right. Known codes wear the neutral finish palette; a code not seen before renders alert-red until classified. Finish-palette rule: bronze is excluded from the categorical rotation on any panel where alert-red can appear (fault codes, command statuses) — fallback order Silver → Steel → Graphite; burgundy (unused today) requires a CVD check against alert-red before ever appearing near alerts.",
       "gridPos": {
         "h": 8,
         "w": 8,

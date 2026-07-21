@@ -102,7 +102,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "<div style=\"height:100%;display:flex;align-items:flex-end;justify-content:space-between;padding:2px 4px 12px 4px;border-bottom:1px solid rgba(255,255,255,0.14);\"><div><div style=\"font-size:26px;line-height:1;letter-spacing:0.16em;color:#FFFFFF;font-weight:800;font-family:Inter,sans-serif;\">HYDE&nbsp;<span style=\"font-weight:300;color:#9E9E9E;\">OPERATIONS</span></div><div style=\"margin-top:7px;font-size:11px;letter-spacing:0.08em;color:#6E6E6E;\">Service health · faults · commands · buffer battery</div></div><span style=\"font-size:10px;letter-spacing:0.22em;color:#3DDC5F;border:1px solid rgba(61,220,95,0.55);border-radius:999px;padding:4px 12px;margin-bottom:2px;white-space:nowrap;\">LIVE DATA</span></div>"
+        "content": "<div style=\"height:100%;display:flex;align-items:flex-end;justify-content:space-between;padding:2px 4px 12px 4px;border-bottom:1px solid rgba(255,255,255,0.14);\"><div><div style=\"font-size:26px;line-height:1;letter-spacing:0.16em;color:#FFFFFF;font-weight:800;font-family:Inter,sans-serif;\">HYDE&nbsp;<span style=\"font-weight:300;color:#9E9E9E;\">OPERATIONS</span></div><div style=\"margin-top:7px;font-size:11px;letter-spacing:0.08em;color:#8A8A8A;\">Service health · faults · commands · buffer battery</div></div><span style=\"font-size:10px;letter-spacing:0.22em;color:#3DDC5F;border:1px solid rgba(61,220,95,0.55);border-radius:999px;padding:4px 12px;margin-bottom:2px;white-space:nowrap;\">LIVE DATA</span></div>"
       }
     },
     {
@@ -326,7 +326,7 @@
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "Newest stored data report of any kind per charger, all time. The real charger (A2111…) reports its buffer battery roughly every 15 minutes even when idle, so more than ~35 minutes of silence while it shows as online is suspicious (orange), and hours of silence are red. chargePointSim and EXT01 are software test rigs that only report during test sessions — long silence there is expected.",
+      "description": "Newest stored data report of any kind per charger, all time. The real charger (A2111…) reports its buffer battery roughly every 15 minutes even when idle, so more than ~35 minutes of silence while it shows as online is suspicious (amber text), and hours of silence are red text. chargePointSim and EXT01 are software test rigs that only report during test sessions — long silence there is expected.",
       "gridPos": {
         "h": 6,
         "w": 8,
@@ -363,8 +363,7 @@
               {
                 "id": "custom.cellOptions",
                 "value": {
-                  "type": "color-background",
-                  "mode": "basic"
+                  "type": "color-text"
                 }
               },
               {
@@ -381,7 +380,7 @@
                       "value": 2100
                     },
                     {
-                      "color": "#E5484D",
+                      "color": "#ED5E66",
                       "value": 7200
                     }
                   ]
@@ -1011,7 +1010,7 @@
                         "index": 0
                       },
                       "Gun B": {
-                        "color": "#6B87A8",
+                        "color": "#7E97B8",
                         "index": 1
                       }
                     }

@@ -115,7 +115,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "<div style=\"height:100%;display:flex;align-items:flex-end;justify-content:space-between;padding:2px 4px 12px 4px;border-bottom:1px solid rgba(255,255,255,0.14);\"><div><div style=\"font-size:26px;line-height:1;letter-spacing:0.16em;color:#FFFFFF;font-weight:800;font-family:Inter,sans-serif;\">HYDE&nbsp;<span style=\"font-weight:300;color:#9E9E9E;\">OVERVIEW</span></div><div style=\"margin-top:7px;font-size:11px;letter-spacing:0.08em;color:#6E6E6E;\">Battery-buffered fast charging — live from the site</div></div><span style=\"font-size:10px;letter-spacing:0.22em;color:#3DDC5F;border:1px solid rgba(61,220,95,0.55);border-radius:999px;padding:4px 12px;margin-bottom:2px;white-space:nowrap;\">LIVE DATA</span></div>"
+        "content": "<div style=\"height:100%;display:flex;align-items:flex-end;justify-content:space-between;padding:2px 4px 12px 4px;border-bottom:1px solid rgba(255,255,255,0.14);\"><div><div style=\"font-size:26px;line-height:1;letter-spacing:0.16em;color:#FFFFFF;font-weight:800;font-family:Inter,sans-serif;\">HYDE&nbsp;<span style=\"font-weight:300;color:#9E9E9E;\">OVERVIEW</span></div><div style=\"margin-top:7px;font-size:11px;letter-spacing:0.08em;color:#8A8A8A;\">Battery-buffered fast charging — live from the site</div></div><span style=\"font-size:10px;letter-spacing:0.22em;color:#3DDC5F;border:1px solid rgba(61,220,95,0.55);border-radius:999px;padding:4px 12px;margin-bottom:2px;white-space:nowrap;\">LIVE DATA</span></div>"
       }
     },
     {
@@ -648,7 +648,7 @@
           "noValue": "No sessions in range",
           "color": {
             "mode": "fixed",
-            "fixedColor": "#6E6E6E"
+            "fixedColor": "#6B87A8"
           },
           "mappings": []
         },
@@ -1079,7 +1079,7 @@
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "Number of sessions started in each hour of the day (columns, 00–23 local CEST time) per weekday (rows), over the selected range. Brighter cells = more sessions; blank cells are true zeros. Weekday rows cover only days the selected range touches (a 24-hour view shows one or two rows, a week all seven). With the default 7-day range each cell is a single specific day.",
+      "description": "Number of sessions started in each hour of the day (columns, 00–23 local CEST time) per weekday (rows), over the selected range. Brighter cells = more sessions; blank cells are true zeros. Weekday rows cover only days the selected range touches (a 24-hour view shows one or two rows, a week all seven). With the default 7-day range each cell is a single specific day. Green tones are deliberately capped so the count stays readable (>=4.5:1) in every cell.",
       "gridPos": {
         "h": 11,
         "w": 18,
@@ -1117,19 +1117,19 @@
                 "value": null
               },
               {
-                "color": "#1C4A28",
+                "color": "#183D21",
                 "value": 1
               },
               {
-                "color": "#2A7A3E",
+                "color": "#1F4F2A",
                 "value": 2
               },
               {
-                "color": "#35B04F",
+                "color": "#245F33",
                 "value": 3
               },
               {
-                "color": "#3DDC5F",
+                "color": "#2A7A3E",
                 "value": 5
               }
             ]

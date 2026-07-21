@@ -165,7 +165,7 @@
           "noValue": "No sessions in range",
           "color": {
             "mode": "fixed",
-            "fixedColor": "#C7C7C7"
+            "fixedColor": "#C7C9CB"
           },
           "custom": {
             "lineWidth": 1,
@@ -379,6 +379,30 @@
               {
                 "id": "custom.width",
                 "value": 70
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "A": {
+                        "color": "#C7C9CB",
+                        "index": 0
+                      },
+                      "B": {
+                        "color": "#6B87A8",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
               }
             ]
           },
@@ -577,7 +601,7 @@
           "noValue": "No sessions in range on this charge point",
           "color": {
             "mode": "fixed",
-            "fixedColor": "#3DDC5F"
+            "fixedColor": "#8A8A8A"
           },
           "custom": {
             "lineWidth": 0,
@@ -587,7 +611,38 @@
           },
           "mappings": []
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gun A"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C7C9CB"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Gun B"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#6B87A8"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "mergeValues": true,
@@ -721,7 +776,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#E6E6E6"
+                  "fixedColor": "#C7C9CB"
                 }
               }
             ]
@@ -736,7 +791,7 @@
                 "id": "color",
                 "value": {
                   "mode": "fixed",
-                  "fixedColor": "#8A8A8A"
+                  "fixedColor": "#6B87A8"
                 }
               }
             ]
@@ -804,6 +859,30 @@
               {
                 "id": "custom.width",
                 "value": 90
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Gun A": {
+                        "color": "#C7C9CB",
+                        "index": 0
+                      },
+                      "Gun B": {
+                        "color": "#6B87A8",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
               }
             ]
           }
@@ -877,12 +956,12 @@
               "options": {
                 "1": {
                   "text": "Gun A",
-                  "color": "#E6E6E6",
+                  "color": "#C7C9CB",
                   "index": 0
                 },
                 "2": {
                   "text": "Gun B",
-                  "color": "#8A8A8A",
+                  "color": "#6B87A8",
                   "index": 1
                 }
               }
@@ -1645,7 +1724,7 @@
           "noValue": "No SoC for this session — firmware didn't send it",
           "color": {
             "mode": "fixed",
-            "fixedColor": "#E6E6E6"
+            "fixedColor": "#C7C9CB"
           },
           "custom": {
             "drawStyle": "line",

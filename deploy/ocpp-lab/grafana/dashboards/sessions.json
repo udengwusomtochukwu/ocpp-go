@@ -456,6 +456,10 @@
                 "value": {
                   "type": "color-text"
                 }
+              },
+              {
+                "id": "noValue",
+                "value": "–"
               }
             ]
           },
@@ -468,6 +472,46 @@
               {
                 "id": "custom.width",
                 "value": 80
+              },
+              {
+                "id": "noValue",
+                "value": "–"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg kW"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": "–"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "kWh"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": "–"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "last SoC %"
+            },
+            "properties": [
+              {
+                "id": "noValue",
+                "value": "–"
               }
             ]
           }

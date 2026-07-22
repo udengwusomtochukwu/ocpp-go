@@ -19,7 +19,17 @@ const (
 	gridImportKey  = "VWGC.ChargingStationCurrentImport"
 	gridTargetKey  = "VWGC.ChargingStationCurrentImportTarget"
 	gridPollPeriod = 60 * time.Second
+
+	// Commercial + hardware-wear keys — unambiguous units (unlike the grid
+	// import, whose vendor scale is unconfirmed and therefore stored raw).
+	priceKey      = "PosCtrlr.PricePerKwh"
+	currencyKey   = "PosCtrlr.Currency"
+	preauthKey    = "PosCtrlr.PreAuthorizationAmount"
+	plugCyclesKey = "VWGC.ChargeGunPlugCycleCounters"
 )
+
+// pollKeys is the full set fetched in one GetConfiguration per charger per tick.
+var pollKeys = []string{gridImportKey, gridTargetKey, priceKey, currencyKey, preauthKey, plugCyclesKey}
 
 func startGridPoller(h *CentralSystemHandler) {
 	go func() {
@@ -41,31 +51,41 @@ func pollGrid(h *CentralSystemHandler) {
 	}
 	h.mu.RUnlock()
 	for _, id := range ids {
-		keys, err := fetchConfigKeys(id, []string{gridImportKey, gridTargetKey})
+		keys, err := fetchConfigKeys(id, pollKeys)
 		if err != nil {
-			log.Debugf("grid poll %s failed: %v", id, err)
+			log.Debugf("charger poll %s failed: %v", id, err)
 			continue
 		}
-		data := map[string]any{}
+		kv := make(map[string]string, len(keys))
 		for _, k := range keys {
-			v, perr := strconv.ParseFloat(k.Value, 64)
+			kv[k.Key] = k.Value
+		}
+		// Grid import/target -> Timescale (raw vendor units) + SSE. Scale is
+		// unconfirmed, so we never convert it to amps/watts here.
+		grid := map[string]any{}
+		for _, gk := range []string{gridImportKey, gridTargetKey} {
+			v, perr := strconv.ParseFloat(kv[gk], 64)
 			if perr != nil {
 				continue
 			}
-			data[k.Key] = v
+			grid[gk] = v
 			if tsdbCh != nil {
 				select {
 				case tsdbCh <- meterSample{
 					ts: time.Now().UTC(), chargePoint: id, connectorID: 0,
-					transactionID: -1, measurand: k.Key, unit: "raw",
+					transactionID: -1, measurand: gk, unit: "raw",
 					location: "Inlet", value: v, isSim: !isLive(id),
 				}:
 				default: // never block the poller on a full buffer
 				}
 			}
 		}
-		if len(data) > 0 {
-			bus.Publish(Event{Type: "grid", Charger: id, Data: data})
+		if len(grid) > 0 {
+			bus.Publish(Event{Type: "grid", Charger: id, Data: grid})
+		}
+		// Commercial + wear -> Prometheus metrics + SSE (unambiguous units).
+		if cd := recordCommercial(id, kv); len(cd) > 0 {
+			bus.Publish(Event{Type: "commercial", Charger: id, Data: cd})
 		}
 	}
 }

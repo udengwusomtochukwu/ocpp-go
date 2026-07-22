@@ -61,7 +61,50 @@ var (
 	// *_info pattern; updates only on BootNotification → tiny cardinality). A
 	// firmware update shows as the firmware label flipping.
 	mChargerInfo metric.Float64Gauge // ocpp_charger_info{vendor,model,firmware,mode}
+	// commercial + hardware-wear gauges, fed from polled config keys (poller.go).
+	// All are the charger's OWN configured/reported figures — no derivation.
+	mTariffPrice metric.Float64Gauge // ocpp_tariff_price_per_kwh{currency,mode}
+	mPreauth     metric.Float64Gauge // ocpp_preauth_amount{currency,mode}
+	mPlugCycles  metric.Float64Gauge // ocpp_plug_cycles{connector,mode}
 )
+
+// recordCommercial publishes tariff, pre-authorization and plug-cycle wear from
+// polled config keys. Currency amounts arrive in minor units (öre for SEK) and
+// are stored as major units. Returns a map for the SSE 'commercial' event.
+func recordCommercial(chargePointID string, kv map[string]string) map[string]any {
+	out := map[string]any{}
+	mode := modeAttr(chargePointID)
+	currency := strings.TrimSpace(kv[currencyKey])
+	if currency == "" {
+		currency = "unknown"
+	}
+	if raw, err := strconv.ParseFloat(strings.TrimSpace(kv[priceKey]), 64); err == nil && mTariffPrice != nil {
+		major := raw / 100
+		mTariffPrice.Record(context.Background(), major, metric.WithAttributes(attribute.String("currency", currency), mode))
+		out["price_per_kwh"], out["currency"] = major, currency
+	}
+	if raw, err := strconv.ParseFloat(strings.TrimSpace(kv[preauthKey]), 64); err == nil && mPreauth != nil {
+		major := raw / 100
+		mPreauth.Record(context.Background(), major, metric.WithAttributes(attribute.String("currency", currency), mode))
+		out["preauth_amount"] = major
+	}
+	// "91,54" -> connector 1 = 91, connector 2 = 54
+	if parts := strings.Split(kv[plugCyclesKey], ","); len(parts) > 0 && mPlugCycles != nil {
+		cycles := make([]float64, 0, len(parts))
+		for i, s := range parts {
+			v, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
+			if err != nil {
+				continue
+			}
+			mPlugCycles.Record(context.Background(), v, metric.WithAttributes(attribute.String("connector", strconv.Itoa(i+1)), mode))
+			cycles = append(cycles, v)
+		}
+		if len(cycles) > 0 {
+			out["plug_cycles"] = cycles
+		}
+	}
+	return out
+}
 
 // recordChargerInfo publishes the charger's boot identity as an info metric.
 func recordChargerInfo(chargePointID, vendor, model, fw string) {
@@ -125,6 +168,12 @@ func startMetrics() {
 		metric.WithDescription("EV state of charge (percent) from SoC meter samples"))
 	mChargerInfo, _ = meter.Float64Gauge("ocpp.charger.info",
 		metric.WithDescription("Charger identity; value always 1, labels carry vendor/model/firmware"))
+	mTariffPrice, _ = meter.Float64Gauge("ocpp.tariff.price_per_kwh",
+		metric.WithDescription("Configured charging tariff (major currency units/kWh) from PosCtrlr.PricePerKwh"))
+	mPreauth, _ = meter.Float64Gauge("ocpp.preauth.amount",
+		metric.WithDescription("Payment pre-authorization hold (major currency units) from PosCtrlr.PreAuthorizationAmount"))
+	mPlugCycles, _ = meter.Float64Gauge("ocpp.plug.cycles",
+		metric.WithDescription("Connector plug-in cycle count per gun from VWGC.ChargeGunPlugCycleCounters"))
 
 	port := defaultMetricsPort
 	if p, ok := os.LookupEnv(envVarMetricsPort); ok && p != "" {

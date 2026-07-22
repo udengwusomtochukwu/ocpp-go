@@ -321,7 +321,8 @@
             "lineInterpolation": "stepAfter",
             "fillOpacity": 20,
             "lineWidth": 2,
-            "spanNulls": false
+            "spanNulls": false,
+            "insertNulls": 180000
           },
           "color": {
             "mode": "fixed",
@@ -485,7 +486,9 @@
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 10,
-            "lineWidth": 2
+            "lineWidth": 2,
+            "insertNulls": 180000,
+            "spanNulls": false
           }
         },
         "overrides": [
@@ -700,7 +703,9 @@
             "fillOpacity": 60,
             "stacking": {
               "mode": "normal"
-            }
+            },
+            "insertNulls": 180000,
+            "spanNulls": false
           },
           "color": {
             "mode": "fixed",
@@ -880,7 +885,9 @@
             "fillOpacity": 60,
             "stacking": {
               "mode": "normal"
-            }
+            },
+            "insertNulls": 180000,
+            "spanNulls": false
           },
           "color": {
             "mode": "fixed",
@@ -1153,7 +1160,8 @@
             "gradientMode": "none",
             "showPoints": "auto",
             "pointSize": 4,
-            "spanNulls": 2700000
+            "spanNulls": false,
+            "insertNulls": 180000
           }
         },
         "overrides": [
@@ -1295,7 +1303,8 @@
             "barAlignment": -1,
             "thresholdsStyle": {
               "mode": "dashed"
-            }
+            },
+            "insertNulls": 180000
           },
           "thresholds": {
             "mode": "absolute",

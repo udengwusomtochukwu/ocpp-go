@@ -796,7 +796,8 @@
             "gradientMode": "none",
             "showPoints": "auto",
             "pointSize": 4,
-            "spanNulls": 2700000
+            "spanNulls": false,
+            "insertNulls": 180000
           }
         },
         "overrides": [
@@ -1656,8 +1657,9 @@
             "gradientMode": "none",
             "showPoints": "auto",
             "pointSize": 4,
-            "spanNulls": true,
-            "axisSoftMin": 0
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "insertNulls": 180000
           }
         },
         "overrides": [
@@ -1768,7 +1770,8 @@
             "gradientMode": "opacity",
             "showPoints": "auto",
             "pointSize": 4,
-            "spanNulls": true
+            "spanNulls": false,
+            "insertNulls": 180000
           }
         },
         "overrides": []
@@ -1829,8 +1832,9 @@
             "gradientMode": "opacity",
             "showPoints": "auto",
             "pointSize": 4,
-            "spanNulls": true,
-            "axisSoftMin": 0
+            "spanNulls": false,
+            "axisSoftMin": 0,
+            "insertNulls": 180000
           }
         },
         "overrides": []

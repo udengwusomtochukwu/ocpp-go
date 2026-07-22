@@ -388,7 +388,9 @@
             "drawStyle": "line",
             "lineInterpolation": "stepAfter",
             "fillOpacity": 20,
-            "lineWidth": 2
+            "lineWidth": 2,
+            "insertNulls": 180000,
+            "spanNulls": false
           },
           "min": 0,
           "color": {
@@ -425,7 +427,9 @@
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 10,
-            "lineWidth": 2
+            "lineWidth": 2,
+            "insertNulls": 180000,
+            "spanNulls": false
           },
           "unit": "opm",
           "min": 0
@@ -552,7 +556,9 @@
             "fillOpacity": 60,
             "stacking": {
               "mode": "normal"
-            }
+            },
+            "insertNulls": 180000,
+            "spanNulls": false
           },
           "unit": "opm",
           "min": 0,
@@ -660,7 +666,9 @@
             "fillOpacity": 60,
             "stacking": {
               "mode": "normal"
-            }
+            },
+            "insertNulls": 180000,
+            "spanNulls": false
           },
           "unit": "opm",
           "min": 0,
@@ -747,7 +755,9 @@
             "fillOpacity": 60,
             "stacking": {
               "mode": "normal"
-            }
+            },
+            "insertNulls": 180000,
+            "spanNulls": false
           },
           "unit": "opm",
           "min": 0,
@@ -802,7 +812,9 @@
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 25,
-            "lineWidth": 2
+            "lineWidth": 2,
+            "insertNulls": 180000,
+            "spanNulls": false
           },
           "unit": "watt",
           "min": 0,
@@ -902,7 +914,9 @@
             "drawStyle": "line",
             "lineInterpolation": "stepAfter",
             "fillOpacity": 10,
-            "lineWidth": 2
+            "lineWidth": 2,
+            "insertNulls": 180000,
+            "spanNulls": false
           },
           "unit": "watth",
           "min": 0,
@@ -968,7 +982,9 @@
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 0,
-            "lineWidth": 2
+            "lineWidth": 2,
+            "insertNulls": 180000,
+            "spanNulls": false
           },
           "unit": "percent",
           "min": 0,

@@ -1483,7 +1483,8 @@
             "gradientMode": "none",
             "spanNulls": false,
             "axisSoftMax": 50,
-            "barAlignment": -1
+            "barAlignment": -1,
+            "insertNulls": 180000
           }
         },
         "overrides": []

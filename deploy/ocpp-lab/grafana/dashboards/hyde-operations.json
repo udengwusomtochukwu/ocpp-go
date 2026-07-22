@@ -1402,6 +1402,272 @@
           "rawSql": "WITH body AS (SELECT charge_point, time_bucket('15 minutes', ts) AS b, avg(value) AS soc FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND measurand = 'SoC' AND location = 'Body' AND ts > now() - interval '30 days' GROUP BY 1, 2 HAVING count(DISTINCT connector_id) >= 2), d AS (SELECT charge_point, b, soc, lag(b) OVER (PARTITION BY charge_point ORDER BY b) AS pb, lag(soc) OVER (PARTITION BY charge_point ORDER BY b) AS psoc FROM body), est AS (SELECT charge_point, b, (soc - psoc) / 100.0 * 218 / (EXTRACT(EPOCH FROM (b - pb)) / 3600.0) AS est_kw FROM d WHERE pb IS NOT NULL AND b - pb = interval '15 minutes' AND soc > psoc AND NOT EXISTS (SELECT 1 FROM meter_samples p WHERE (CASE WHEN '$mode' = 'live' THEN NOT p.is_sim WHEN '$mode' = 'sim' THEN p.is_sim ELSE true END) AND p.charge_point = d.charge_point AND p.ts > d.pb AND p.ts <= d.b AND (p.transaction_id IS NOT NULL OR (p.measurand = 'Power.Active.Import' AND p.value * CASE WHEN p.unit = 'kW' THEN 1 WHEN p.unit = 'MW' THEN 1000 ELSE 0.001 END > 0.5)))) SELECT round(max(est_kw)::numeric, 1) AS \"peak grid draw\" FROM est WHERE est_kw <= 90"
         }
       ]
+    },
+    {
+      "id": 901,
+      "type": "row",
+      "title": "Commercial & tariff — live charger",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 51
+      },
+      "panels": []
+    },
+    {
+      "id": 910,
+      "type": "stat",
+      "title": "Tariff — SEK / kWh",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 5,
+        "x": 0,
+        "y": 52
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#3DDC5F",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max(ocpp_tariff_price_per_kwh{mode=~\"$mode\"})",
+          "legendFormat": "tariff",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 911,
+      "type": "stat",
+      "title": "Pre-auth hold — SEK",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 5,
+        "x": 5,
+        "y": 52
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max(ocpp_preauth_amount{mode=~\"$mode\"})",
+          "legendFormat": "pre-auth",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 912,
+      "type": "stat",
+      "title": "Firmware",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 10,
+        "y": 52
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "name",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "ocpp_charger_info{mode=~\"$mode\"}",
+          "legendFormat": "{{firmware}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 913,
+      "type": "stat",
+      "title": "Plug-in cycles per gun (connector wear)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 52
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": []
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "ocpp_plug_cycles{mode=~\"$mode\"}",
+          "legendFormat": "Gun {{connector}}",
+          "instant": true
+        }
+      ]
     }
   ]
 }

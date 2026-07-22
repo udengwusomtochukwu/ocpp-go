@@ -108,6 +108,20 @@ func startTimescale() {
 		return
 	}
 	tsdbCh = make(chan meterSample, tsdbBufferSize)
+	// Seed the transaction counter past everything already recorded so tx ids
+	// stay unique across CS restarts (an in-memory counter that reset each
+	// redeploy caused distinct sessions to share ids and merge in per-session
+	// views). Runs synchronously at boot, before the WS listener starts, so no
+	// lock is needed on nextTransactionId yet.
+	seedCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	var next int
+	if err := pool.QueryRow(seedCtx, `SELECT COALESCE(MAX(transaction_id),0)+1 FROM meter_samples`).Scan(&next); err != nil {
+		log.Errorf("tsdb: tx-counter seed query failed (keeping default %d): %v", nextTransactionId, err)
+	} else if next > nextTransactionId {
+		nextTransactionId = next
+		log.Infof("tsdb: transaction counter seeded from store: next id %d", next)
+	}
 	go tsdbWriter(pool)
 }
 

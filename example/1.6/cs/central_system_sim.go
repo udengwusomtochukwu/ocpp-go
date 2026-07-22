@@ -250,6 +250,16 @@ func main() {
 			if _, err := syncGetConfiguration(id, nil, handler); err != nil {
 				log.WithField("client", id).Debugf("config prefetch failed: %v", err)
 			}
+			// Boot identity arrives only in BootNotification, which chargers
+			// send on THEIR boot — not on socket reconnects after a CS
+			// restart. If identity is missing (in-memory registry reset),
+			// ask for it explicitly via RemoteTrigger.
+			handler.mu.RLock()
+			missing := handler.chargePoints[id] != nil && handler.chargePoints[id].bootVendor == ""
+			handler.mu.RUnlock()
+			if missing {
+				_ = centralSystem.TriggerMessage(id, func(c *remotetrigger.TriggerMessageConfirmation, err error) {}, remotetrigger.MessageTrigger(core.BootNotificationFeatureName))
+			}
 		}()
 	})
 	centralSystem.SetChargePointDisconnectedHandler(func(chargePoint ocpp16.ChargePointConnection) {
@@ -274,6 +284,8 @@ func main() {
 	startMetrics()
 	// hyde/lab: REST + SSE surface (registry, commands, events) on API_PORT
 	startREST(handler)
+	// hyde/lab: measured grid-side intake via vendor config keys -> Timescale
+	startGridPoller(handler)
 	// hyde/lab: raw MeterValues -> TimescaleDB when TSDB_DSN is set (ADR-0003
 	// preview: product-data plane, separate from the Prometheus ops metrics)
 	startTimescale()

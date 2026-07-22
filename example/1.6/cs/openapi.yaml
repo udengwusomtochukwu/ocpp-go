@@ -204,6 +204,29 @@ paths:
                 transactionId: { type: integer, description: "Optional — resolves to the active transaction when omitted" }
       responses:
         "200": { description: Confirmation, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
+  /chargers/{id}/commands/update-firmware:
+    post:
+      tags: [commands]
+      summary: UpdateFirmware — remote firmware update (OCPP FirmwareManagement)
+      description: |
+        The charger downloads the package from `location` and reports progress via
+        FirmwareStatusNotification (registry `firmwareStatus` + SSE), then reboots and
+        re-announces its version via BootNotification. This unit signature-verifies
+        packages (embedded vendor public key) — only vendor-signed packages install.
+      security: [{ internalToken: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [location]
+              properties:
+                location: { type: string, example: "https://…/package.bin", description: "http(s)/ftp(s) URL of the firmware package" }
+                retrieveDate: { type: string, format: date-time, description: "When to start downloading (default: now +10s)" }
+      responses:
+        "200": { description: Request accepted by charger (progress is async), content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
   /chargers/{id}/commands/unlock-connector:
     post:
       tags: [commands]

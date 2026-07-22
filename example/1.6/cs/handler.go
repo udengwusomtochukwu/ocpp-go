@@ -118,6 +118,7 @@ func (handler *CentralSystemHandler) OnBootNotification(chargePointId string, re
 		"firmware": request.FirmwareVersion, "serial": request.ChargePointSerialNumber,
 		"interval": heartbeatInterval,
 	}})
+	recordChargerInfo(chargePointId, request.ChargePointVendor, request.ChargePointModel, request.FirmwareVersion)
 	logDefault(chargePointId, request.GetFeatureName()).WithContext(ctx).Infof("boot confirmed")
 	return core.NewBootNotificationConfirmation(types.NewDateTime(time.Now()), heartbeatInterval, core.RegistrationStatusAccepted), nil
 }

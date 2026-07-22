@@ -57,7 +57,24 @@ var (
 	// the mode series that ever reported power, so live/sim stay independent.
 	powerSeenLive atomic.Bool
 	powerSeenSim  atomic.Bool
+	// identity info-metric: value always 1, labels carry the strings (standard
+	// *_info pattern; updates only on BootNotification → tiny cardinality). A
+	// firmware update shows as the firmware label flipping.
+	mChargerInfo metric.Float64Gauge // ocpp_charger_info{vendor,model,firmware,mode}
 )
+
+// recordChargerInfo publishes the charger's boot identity as an info metric.
+func recordChargerInfo(chargePointID, vendor, model, fw string) {
+	if mChargerInfo == nil {
+		return
+	}
+	mChargerInfo.Record(context.Background(), 1, metric.WithAttributes(
+		attribute.String("vendor", vendor),
+		attribute.String("model", model),
+		attribute.String("firmware", fw),
+		modeAttr(chargePointID),
+	))
+}
 
 // modeAttr is the low-cardinality live/sim label attached to every metric.
 func modeAttr(chargePointID string) attribute.KeyValue {
@@ -106,6 +123,8 @@ func startMetrics() {
 		metric.WithDescription("Energy register reading (Wh) from Energy.Active.{Import,Export}.Register meter samples, by direction"))
 	mSoC, _ = meter.Float64Gauge("ocpp.soc.percent",
 		metric.WithDescription("EV state of charge (percent) from SoC meter samples"))
+	mChargerInfo, _ = meter.Float64Gauge("ocpp.charger.info",
+		metric.WithDescription("Charger identity; value always 1, labels carry vendor/model/firmware"))
 
 	port := defaultMetricsPort
 	if p, ok := os.LookupEnv(envVarMetricsPort); ok && p != "" {

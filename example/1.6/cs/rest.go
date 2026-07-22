@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/core"
+	"github.com/lorenzodonini/ocpp-go/ocpp1.6/firmware"
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/remotetrigger"
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/smartcharging"
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/types"
@@ -239,6 +240,27 @@ func handleCommand(w http.ResponseWriter, r *http.Request, h *CentralSystemHandl
 			}
 			done <- confirmOutcome(s, nil, err, c == nil)
 		}, txID)
+	case "update-firmware":
+		// OCPP 1.6 FirmwareManagement: the charger downloads the package from
+		// `location` and reports progress via FirmwareStatusNotification
+		// (visible in the registry + SSE). This unit signature-verifies
+		// packages (VWGC.UpdateSignaturePublicKey) — only vendor-signed
+		// packages will install.
+		feature = firmware.UpdateFirmwareFeatureName
+		loc := str("location", "")
+		if !strings.HasPrefix(loc, "https://") && !strings.HasPrefix(loc, "http://") && !strings.HasPrefix(loc, "ftp://") && !strings.HasPrefix(loc, "ftps://") {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "location must be an http(s)/ftp(s) URL to the firmware package"})
+			return
+		}
+		retrieve := types.NewDateTime(time.Now().Add(10 * time.Second))
+		if s := str("retrieveDate", ""); s != "" {
+			if t, perr := time.Parse(time.RFC3339, s); perr == nil {
+				retrieve = types.NewDateTime(t)
+			}
+		}
+		sendErr = centralSystem.UpdateFirmware(chargerID, func(c *firmware.UpdateFirmwareConfirmation, err error) {
+			done <- confirmOutcome("Accepted", map[string]any{"location": loc, "retrieveDate": retrieve.FormatTimestamp()}, err, c == nil)
+		}, loc, retrieve)
 	case "unlock-connector":
 		feature = core.UnlockConnectorFeatureName
 		connector := num("connectorId", 1)
@@ -367,7 +389,7 @@ func handleCommand(w http.ResponseWriter, r *http.Request, h *CentralSystemHandl
 	default:
 		writeJSON(w, http.StatusNotFound, map[string]any{"error": "unknown command", "commands": []string{
 			"remote-start", "remote-stop", "trigger", "reset", "unlock-connector", "get-configuration",
-			"change-configuration", "set-charging-profile", "clear-charging-profile", "get-composite-schedule",
+			"change-configuration", "set-charging-profile", "clear-charging-profile", "get-composite-schedule", "update-firmware",
 		}})
 		return
 	}

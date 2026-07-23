@@ -1418,12 +1418,12 @@
     {
       "id": 32,
       "type": "stat",
-      "title": "Boost energy available now",
+      "title": "Boost energy available now (usable)",
       "datasource": {
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "DERIVED ESTIMATE — buffer state of charge × the 218 kWh usable buffer of a PEAK330-class unit, summed across chargers that report a buffer. Energy standing ready to boost fast charging beyond the grid feed, from the latest ~15-minute buffer report (sides averaged per unit).",
+      "description": "DERIVED: average buffer SoC x 160 kWh - the vendor-specified maximum USABLE capacity (nominal 193.5 kWh, SoC window 5-95%; reported SoC is consistent with being normalized over the usable window). Previously used 218 kWh, which overstated deliverable energy.",
       "gridPos": {
         "h": 6,
         "w": 5,
@@ -1468,7 +1468,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT round(sum(unit_kwh)::numeric, 0) AS \"boost energy\" FROM (SELECT charge_point, avg(last_soc) / 100.0 * 218 AS unit_kwh FROM (SELECT charge_point, connector_id, last(value, ts) AS last_soc FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND measurand = 'SoC' AND location = 'Body' AND ts > now() - interval '2 hours' GROUP BY 1, 2) s GROUP BY 1) u"
+          "rawSql": "SELECT round(sum(unit_kwh)::numeric, 0) AS \"boost energy\" FROM (SELECT charge_point, avg(last_soc) / 100.0 * 160 AS unit_kwh FROM (SELECT charge_point, connector_id, last(value, ts) AS last_soc FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND measurand = 'SoC' AND location = 'Body' AND ts > now() - interval '2 hours' GROUP BY 1, 2) s GROUP BY 1) u"
         }
       ]
     },
@@ -1480,7 +1480,7 @@
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "DERIVED ESTIMATE — the charger exposes no grid-side meter over OCPP, so grid intake is inferred from buffer-battery physics: the rise of the internal 218 kWh buffer's state of charge between two consecutive 15-minute reports × 218 kWh ÷ 15 min = the power the grid fed into the buffer. Guards: an interval only counts when both gun sides reported (a single side would skew the pack average), the two reports are strictly adjacent (no gap-spanning), and nothing in the interval belonged to a charging transaction or drew over 0.5 kW — and nothing is interpolated. Reading resolution: buffer SoC reports in ~0.5% steps, so each estimate quantizes to roughly ±4.4 kW, and any estimate above 90 kW — physically implausible for a 63 A feed, e.g. a firmware SoC recalibration jump — is dropped rather than shown. Cross-check: the measured ceiling (~43.6 kW) matches the unit's configured 63 A feed (√3 × 400 V × 63 A = 43.6 kW). Bars appear only for refill intervals; an empty stretch means the buffer was full or a car was charging. This is the effektavgift (demand-charge) story: the site never asks the grid for more than its small feed.\n\nMeasured at the inlet: the charger's VWGC.ChargingStationCurrentImport vendor reading, polled every 60 s. Encoding verified empirically: raw value = 100000 + watts (idle floor ≈ 30–50 W of standby electronics, 0 W during the firmware reboot, peaks 40.1 kW vs the 43.6 kW feed ceiling, sustained refill matching the ΔSoC estimate of 34.9–39.2 kW). Series exists from 2026-07-22 21:41 UTC onward.",
+      "description": "DERIVED ESTIMATE — the charger exposes no grid-side meter over OCPP, so grid intake is inferred from buffer-battery physics: the rise of the internal 218 kWh buffer's state of charge between two consecutive 15-minute reports × 218 kWh ÷ 15 min = the power the grid fed into the buffer. Guards: an interval only counts when both gun sides reported (a single side would skew the pack average), the two reports are strictly adjacent (no gap-spanning), and nothing in the interval belonged to a charging transaction or drew over 0.5 kW — and nothing is interpolated. Reading resolution: buffer SoC reports in ~0.5% steps, so each estimate quantizes to roughly ±4.4 kW, and any estimate above 90 kW — physically implausible for a 63 A feed, e.g. a firmware SoC recalibration jump — is dropped rather than shown. Cross-check: the measured ceiling (~43.6 kW) matches the unit's configured 63 A feed (√3 × 400 V × 63 A = 43.6 kW). Bars appear only for refill intervals; an empty stretch means the buffer was full or a car was charging. This is the effektavgift (demand-charge) story: the site never asks the grid for more than its small feed.\n\nMeasured at the inlet: the charger's VWGC.ChargingStationCurrentImport vendor reading, polled every 60 s. Encoding verified empirically: raw value = 100000 + watts (idle floor ≈ 30–50 W of standby electronics, 0 W during the firmware reboot, peaks 40.1 kW vs the 43.6 kW feed ceiling, sustained refill matching the ΔSoC estimate of 34.9–39.2 kW). Series exists from 2026-07-22 21:41 UTC onward.\n\nCalibration note (2026-07-23, vendor doc + measured-inlet cross-check): the 218 kWh constant predates the vendor spec (193.5 kWh nominal / 160 kWh usable, SoC window 5-95%) and a first clean measured refill hour indicates ~181 kWh grid-side per 100% SoC — i.e. this estimate likely OVERSTATES by ~20%. The measured inlet line is authoritative; the estimate stays for method comparison and pre-Jul-22 history until more clean refill windows confirm the constant.",
       "gridPos": {
         "h": 6,
         "w": 9,

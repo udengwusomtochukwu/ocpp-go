@@ -56,4 +56,4 @@ ALTER TABLE meter_samples SET (
     timescaledb.compress_segmentby = 'charge_point, transaction_id'
 );
 SELECT add_compression_policy('meter_samples', compress_after => INTERVAL '7 days', if_not_exists => TRUE);
-SELECT add_retention_policy('meter_samples', drop_after => INTERVAL '90 days', if_not_exists => TRUE);
+SELECT add_retention_policy('meter_samples', drop_after => INTERVAL '3 years', if_not_exists => TRUE);

@@ -106,7 +106,12 @@ var tsdbPolicies = []string{
 		timescaledb.compress_orderby = 'ts DESC',
 		timescaledb.compress_segmentby = 'charge_point, transaction_id')`,
 	`SELECT add_compression_policy('meter_samples', compress_after => INTERVAL '7 days', if_not_exists => TRUE)`,
-	`SELECT add_retention_policy('meter_samples', drop_after => INTERVAL '90 days', if_not_exists => TRUE)`,
+	// Remove+add so the interval converges to code truth (if_not_exists alone
+	// never updates an existing policy). 3 years: the meter store is the
+	// business-history source of record (ADR-0003 posture, promised to the
+	// investment partner) — raw samples must outlive lab experiments.
+	`SELECT remove_retention_policy('meter_samples', if_exists => true)`,
+	`SELECT add_retention_policy('meter_samples', drop_after => INTERVAL '3 years', if_not_exists => TRUE)`,
 }
 
 // startTimescale launches the meter-sample writer when TSDB_DSN is set.

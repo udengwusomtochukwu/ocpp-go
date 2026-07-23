@@ -15,7 +15,7 @@
   "timezone": "browser",
   "fiscalYearStartMonth": 0,
   "time": {
-    "from": "now-7d",
+    "from": "now-24h",
     "to": "now"
   },
   "refresh": "30s",
@@ -628,7 +628,7 @@
       "id": 13,
       "type": "state-timeline",
       "title": "Gun activity — when was each EVSE charging?",
-      "description": "Per-minute buckets of meter_samples with a transaction attached, one lane per gun; the block value is the OCPP transaction id. Gaps longer than 6 minutes break a block (the 5-minute pre-charge handshake stays bridged). A gun with no lane had no session in range. Lab caveat: the CS transaction counter resets on restart, so a reused tx id shows as one continuous state across restarts.",
+      "description": "Per-minute buckets of meter_samples with a transaction attached, one lane per gun; the block value is the OCPP transaction id. Gaps longer than 6 minutes break a block (the 5-minute pre-charge handshake stays bridged). A gun with no lane had no session in range. Lab caveat: the CS transaction counter resets on restart, so a reused tx id shows as one continuous state across restarts.\n\nAlways covers the last 24 hours (panel time override), even when the dashboard is zoomed into a single session.",
       "gridPos": {
         "h": 8,
         "w": 18,
@@ -715,13 +715,14 @@
           "rawQuery": true,
           "rawSql": "SELECT time_bucket('1 minute', ts) AS \"time\", CASE connector_id WHEN 1 THEN 'Gun A' WHEN 2 THEN 'Gun B' ELSE 'Connector ' || connector_id END AS metric, max(transaction_id) AS value FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND charge_point = '$chargepoint' AND transaction_id IS NOT NULL AND $__timeFilter(ts) GROUP BY 1, 2 ORDER BY 1"
         }
-      ]
+      ],
+      "timeFrom": "24h"
     },
     {
       "id": 14,
       "type": "stat",
       "title": "Max simultaneous guns",
-      "description": "Highest number of this charge point's guns metering a transaction in the same minute, over the dashboard range. 2 ⇒ both guns charged at once; 1 ⇒ sessions never overlapped.",
+      "description": "Highest number of this charge point's guns metering a transaction in the same minute, over the dashboard range. 2 ⇒ both guns charged at once; 1 ⇒ sessions never overlapped.\n\nAlways covers the last 24 hours (panel time override), even when the dashboard is zoomed into a single session.",
       "gridPos": {
         "h": 8,
         "w": 6,
@@ -773,13 +774,14 @@
           "rawQuery": true,
           "rawSql": "SELECT COALESCE(max(active), 0) AS \"max simultaneous guns\" FROM (SELECT time_bucket('1 minute', ts) AS b, count(DISTINCT connector_id) AS active FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND charge_point = '$chargepoint' AND transaction_id IS NOT NULL AND $__timeFilter(ts) GROUP BY 1) x"
         }
-      ]
+      ],
+      "timeFrom": "24h"
     },
     {
       "id": 15,
       "type": "timeseries",
       "title": "Buffer battery SoC (grid-side view)",
-      "description": "Checked live: this firmware exposes no grid-side measurands over OCPP (no location='Inlet' rows — only Outlet, SoC@EV and SoC@Body), so grid draw vs car draw can't be plotted directly. What it does send is SoC at location='Body': the FlexPole's internal buffer battery, reported per gun side every ~15 min even while idle. The battery-buffered signature is visible here instead — the buffer dips while a car draws more than the grid feed, then recharges slowly afterwards.",
+      "description": "Checked live: this firmware exposes no grid-side measurands over OCPP (no location='Inlet' rows — only Outlet, SoC@EV and SoC@Body), so grid draw vs car draw can't be plotted directly. What it does send is SoC at location='Body': the FlexPole's internal buffer battery, reported per gun side every ~15 min even while idle. The battery-buffered signature is visible here instead — the buffer dips while a car draws more than the grid feed, then recharges slowly afterwards.\n\nAlways covers the last 24 hours (panel time override), even when the dashboard is zoomed into a single session.",
       "gridPos": {
         "h": 9,
         "w": 12,
@@ -808,7 +810,7 @@
             "showPoints": "auto",
             "pointSize": 4,
             "spanNulls": false,
-            "insertNulls": 180000
+            "insertNulls": 1200000
           }
         },
         "overrides": [
@@ -866,13 +868,14 @@
           "rawQuery": true,
           "rawSql": "SELECT time_bucket('1 minute', ts) AS \"time\", CASE connector_id WHEN 1 THEN 'Buffer SoC - Gun A side' WHEN 2 THEN 'Buffer SoC - Gun B side' ELSE 'Buffer SoC - connector ' || connector_id END AS metric, avg(value) AS value FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND charge_point = '$chargepoint' AND measurand = 'SoC' AND location = 'Body' AND $__timeFilter(ts) GROUP BY 1, 2 ORDER BY 1"
         }
-      ]
+      ],
+      "timeFrom": "24h"
     },
     {
       "id": 16,
       "type": "table",
       "title": "EVSEs in service",
-      "description": "Per-gun liveness and usage for $chargepoint. 'Last activity' is the newest meter sample of any kind (idle buffer-battery heartbeats included, all time); last tx, sessions and kWh respect the dashboard range and count only metered transactions. A blank kWh means no import-register rows in range (e.g. the sim, which reports export only) — blank is the truth there, not 0. A gun that reports but shows 0 sessions is in service, just unused. Live connector status is on dashboard-dev.hydecharge.com/chargers.\n\nGuns only: connector 0 is the station itself (it carries the polled grid-side Inlet feed — VWGC.ChargingStationCurrentImport — not a charging gun) and is excluded here.",
+      "description": "Per-gun liveness and usage for $chargepoint. 'Last activity' is the newest meter sample of any kind (idle buffer-battery heartbeats included, all time); last tx, sessions and kWh respect the dashboard range and count only metered transactions. A blank kWh means no import-register rows in range (e.g. the sim, which reports export only) — blank is the truth there, not 0. A gun that reports but shows 0 sessions is in service, just unused. Live connector status is on dashboard-dev.hydecharge.com/chargers.\n\nGuns only: connector 0 is the station itself (it carries the polled grid-side Inlet feed — VWGC.ChargingStationCurrentImport — not a charging gun) and is excluded here.\n\nAlways covers the last 24 hours (panel time override), even when the dashboard is zoomed into a single session.",
       "gridPos": {
         "h": 9,
         "w": 12,
@@ -957,7 +960,8 @@
           "rawQuery": true,
           "rawSql": "WITH act AS (SELECT connector_id, max(ts) AS last_any FROM meter_samples WHERE connector_id > 0 AND (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND charge_point = '$chargepoint' GROUP BY 1), per_tx AS (SELECT connector_id, transaction_id, max(ts) AS last_ts, max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') AS kwh FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND charge_point = '$chargepoint' AND transaction_id IS NOT NULL AND $__timeFilter(ts) GROUP BY 1, 2) SELECT CASE act.connector_id WHEN 1 THEN 'Gun A' WHEN 2 THEN 'Gun B' ELSE 'Connector ' || act.connector_id END AS \"gun\", act.last_any AS \"last activity\", last(per_tx.transaction_id, per_tx.last_ts) AS \"last tx (range)\", count(per_tx.transaction_id)::int AS \"sessions (range)\", round(sum(per_tx.kwh)::numeric, 2) AS \"kWh (range)\" FROM act LEFT JOIN per_tx USING (connector_id) GROUP BY act.connector_id, act.last_any ORDER BY act.connector_id"
         }
-      ]
+      ],
+      "timeFrom": "24h"
     },
     {
       "id": 102,

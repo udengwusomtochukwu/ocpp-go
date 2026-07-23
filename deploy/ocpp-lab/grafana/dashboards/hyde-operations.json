@@ -1235,7 +1235,7 @@
             "showPoints": "auto",
             "pointSize": 4,
             "spanNulls": false,
-            "insertNulls": 180000
+            "insertNulls": 1200000
           }
         },
         "overrides": [

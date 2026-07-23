@@ -297,6 +297,66 @@
       ]
     },
     {
+      "id": 912,
+      "type": "stat",
+      "title": "Firmware",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 8,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "name",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "ocpp_charger_info{mode=~\"$mode\"}",
+          "legendFormat": "{{firmware}}",
+          "instant": true
+        }
+      ]
+    },
+    {
       "id": 3,
       "type": "timeseries",
       "title": "Chargers online — over time",
@@ -307,8 +367,8 @@
       "description": "Connected-charger count over the selected range. Gaps mean the backend was not scrapeable at that time (unknown state) — they are deliberately not drawn as zero.",
       "gridPos": {
         "h": 6,
-        "w": 8,
-        "x": 8,
+        "w": 6,
+        "x": 12,
         "y": 4
       },
       "fieldConfig": {
@@ -365,8 +425,8 @@
       "description": "Newest stored data report of any kind per charger, all time. The real charger (A2111…) reports its buffer battery roughly every 15 minutes even when idle, so more than ~35 minutes of silence while it shows as online is suspicious (amber text), and hours of silence are red text. chargePointSim and EXT01 are software test rigs that only report during test sessions — long silence there is expected.",
       "gridPos": {
         "h": 6,
-        "w": 8,
-        "x": 16,
+        "w": 6,
+        "x": 18,
         "y": 4
       },
       "fieldConfig": {
@@ -1426,7 +1486,7 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 5,
+        "w": 6,
         "x": 0,
         "y": 52
       },
@@ -1487,8 +1547,8 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 5,
-        "x": 5,
+        "w": 6,
+        "x": 6,
         "y": 52
       },
       "fieldConfig": {
@@ -1539,66 +1599,6 @@
       ]
     },
     {
-      "id": 912,
-      "type": "stat",
-      "title": "Firmware",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 10,
-        "y": 52
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "textMode": "name",
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "wideLayout": true,
-        "showPercentChange": false,
-        "percentChangeColorMode": "standard"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "ocpp_charger_info{mode=~\"$mode\"}",
-          "legendFormat": "{{firmware}}",
-          "instant": true
-        }
-      ]
-    },
-    {
       "id": 913,
       "type": "stat",
       "title": "Plug-in cycles per gun (connector wear)",
@@ -1608,8 +1608,8 @@
       },
       "gridPos": {
         "h": 6,
-        "w": 8,
-        "x": 16,
+        "w": 12,
+        "x": 12,
         "y": 52
       },
       "fieldConfig": {

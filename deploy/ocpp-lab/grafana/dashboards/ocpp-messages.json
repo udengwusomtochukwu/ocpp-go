@@ -1,0 +1,246 @@
+{
+  "uid": "ocpp-messages",
+  "title": "HYDE · OCPP Messages",
+  "tags": [
+    "hyde"
+  ],
+  "schemaVersion": 39,
+  "timezone": "browser",
+  "editable": true,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "Live",
+          "value": "live"
+        },
+        "description": "Global data mode. Live = real hardware on the LIVE_CHARGER_IDS allowlist; Simulation = every other charge-point id (internal sim, EXT01, test rigs); All = both. Prometheus series recorded before the mode label existed (pre 2026-07-21) only appear under All; Timescale history is backfilled and splits correctly.",
+        "hide": 0,
+        "includeAll": false,
+        "label": "mode",
+        "multi": false,
+        "name": "mode",
+        "options": [
+          {
+            "selected": true,
+            "text": "Live",
+            "value": "live"
+          },
+          {
+            "selected": false,
+            "text": "Simulation",
+            "value": "sim"
+          },
+          {
+            "selected": false,
+            "text": "All",
+            "value": ".*"
+          }
+        ],
+        "query": "Live : live, Simulation : sim, All : .*",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "name": "action",
+        "type": "custom",
+        "label": "Message",
+        "query": "All : .+, BootNotification : BootNotification, Heartbeat : Heartbeat, StatusNotification : StatusNotification, Authorize : Authorize, StartTransaction : StartTransaction, StopTransaction : StopTransaction, MeterValues : MeterValues, DataTransfer : DataTransfer, FirmwareStatusNotification : FirmwareStatusNotification, DiagnosticsStatusNotification : DiagnosticsStatusNotification",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": ".+"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": ".+"
+          },
+          {
+            "selected": false,
+            "text": "BootNotification",
+            "value": "BootNotification"
+          },
+          {
+            "selected": false,
+            "text": "Heartbeat",
+            "value": "Heartbeat"
+          },
+          {
+            "selected": false,
+            "text": "StatusNotification",
+            "value": "StatusNotification"
+          },
+          {
+            "selected": false,
+            "text": "Authorize",
+            "value": "Authorize"
+          },
+          {
+            "selected": false,
+            "text": "StartTransaction",
+            "value": "StartTransaction"
+          },
+          {
+            "selected": false,
+            "text": "StopTransaction",
+            "value": "StopTransaction"
+          },
+          {
+            "selected": false,
+            "text": "MeterValues",
+            "value": "MeterValues"
+          },
+          {
+            "selected": false,
+            "text": "DataTransfer",
+            "value": "DataTransfer"
+          },
+          {
+            "selected": false,
+            "text": "FirmwareStatusNotification",
+            "value": "FirmwareStatusNotification"
+          },
+          {
+            "selected": false,
+            "text": "DiagnosticsStatusNotification",
+            "value": "DiagnosticsStatusNotification"
+          }
+        ],
+        "includeAll": false,
+        "multi": false
+      }
+    ]
+  },
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "HYDE · Overview",
+      "type": "link",
+      "url": "d/hyde-overview"
+    },
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "HYDE · Operations",
+      "type": "link",
+      "url": "d/hyde-operations"
+    },
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "HYDE · Sessions",
+      "type": "link",
+      "url": "d/ocpp-sessions"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "<div style=\"font-family:Manrope,system-ui,sans-serif;padding:6px 2px\"><span style=\"font-weight:800;letter-spacing:.02em\">HYDE</span><span style=\"font-weight:300;color:#9E9E9E\"> · OCPP Messages</span><div style=\"color:#8A8A8A;font-size:12px;margin-top:2px\">Live OCPP conversation from the charger — human-readable, filter by Message type. The vendor diagnostics equivalent.</div></div>"
+      }
+    },
+    {
+      "id": 10,
+      "type": "logs",
+      "title": "OCPP message log",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 24,
+        "x": 0,
+        "y": 3
+      },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"ocpp-central-system\"} | message =~ `$action` | mode=~`$mode` or mode=``"
+        }
+      ],
+      "description": "Every OCPP message the charger sends/receives, filtered by the Message dropdown (like the vendor's log UI). Click a line to expand fields (client, message, mode, trace)."
+    },
+    {
+      "id": 11,
+      "type": "logs",
+      "title": "FirmwareStatusNotification — update progression",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 19
+      },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "enableLogDetails": true,
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service_name=\"ocpp-central-system\"} | message = `FirmwareStatusNotification`"
+        }
+      ],
+      "description": "Firmware-over-the-air status: Downloading -> Downloaded -> Installing -> Installed (or *Failed). Watch a remote UpdateFirmware here."
+    }
+  ]
+}

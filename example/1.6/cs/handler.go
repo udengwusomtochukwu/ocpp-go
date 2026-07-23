@@ -198,6 +198,28 @@ func (handler *CentralSystemHandler) OnStatusNotification(chargePointId string, 
 		"errorCode": string(request.ErrorCode), "vendorErrorCode": request.VendorErrorCode,
 		"info": request.Info,
 	}})
+	// Faults must survive restarts: the registry's fault ring is in-memory and
+	// dies with the process, and the info-level status line below never carries
+	// the errorCode — so without this, Loki (the durable log) had no record of
+	// a fault at all. Warn/error level also makes the operations dashboard's
+	// errors panel pick it up.
+	if request.ErrorCode != core.NoError {
+		detail := request.Info
+		if request.VendorErrorCode != "" {
+			detail = strings.TrimSpace(detail + " [vendor " + request.VendorErrorCode + "]")
+		}
+		entry := logDefault(chargePointId, request.GetFeatureName()).WithFields(logrus.Fields{
+			"error_code":        string(request.ErrorCode),
+			"vendor_error_code": request.VendorErrorCode,
+			"connector":         request.ConnectorId,
+		})
+		line := fmt.Sprintf("charger fault: connector %d · %s · %s · %s", request.ConnectorId, request.Status, request.ErrorCode, detail)
+		if request.Status == core.ChargePointStatusFaulted {
+			entry.Error(line)
+		} else {
+			entry.Warn(line)
+		}
+	}
 	if request.ConnectorId > 0 {
 		logDefault(chargePointId, request.GetFeatureName()).Infof("connector %v updated status to %v", request.ConnectorId, request.Status)
 	} else {

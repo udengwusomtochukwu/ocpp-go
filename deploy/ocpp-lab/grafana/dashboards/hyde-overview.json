@@ -173,7 +173,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "How many chargers hold a live connection to the charging backend at this moment. Orange zero = no charger can start a session. If the backend itself cannot be reached, this shows 'backend unreachable' instead of a stale number.\n\nThis is a right-now stat: it always evaluates over the last 5 minutes regardless of the dashboard time range (a frozen historical range otherwise blanks it).",
+      "description": "How many chargers hold a live connection to the charging backend at this moment. Orange zero = no charger can start a session. If the backend itself cannot be reached, this shows 'backend unreachable' instead of a stale number.\n\nThis is a right-now stat: it always evaluates over the last 5 minutes regardless of the dashboard time range (a frozen historical range otherwise blanks it).\n\nTruth states: a number = chargers connected (in the selected mode); 'backend unreachable' = the metrics scrape is actively failing; 'no metrics in this time range' = the selected window predates the collected metrics history (e.g. a frozen absolute range) — pick a relative range like Last 24 hours.",
       "gridPos": {
         "h": 5,
         "w": 4,
@@ -184,7 +184,7 @@
         "defaults": {
           "unit": "none",
           "decimals": 0,
-          "noValue": "backend unreachable",
+          "noValue": "no metrics in this time range",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -197,7 +197,19 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "backend unreachable",
+                  "color": "#F5A623",
+                  "index": 0
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -225,7 +237,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "(sum(ocpp_chargers_connected{mode=~\"$mode\"}) or vector(0)) and on() (up{job=\"ocpp-central-system\"} == 1)",
+          "expr": "(sum(ocpp_chargers_connected{mode=~\"$mode\"}) or vector(0)) and on() (up{job=\"ocpp-central-system\"} == 1) or (vector(-1) and on() (up{job=\"ocpp-central-system\"} == 0))",
           "legendFormat": "online"
         }
       ],

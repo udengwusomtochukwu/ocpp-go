@@ -288,7 +288,7 @@ func main() {
 	startGridPoller(handler)
 	// hyde/lab: raw MeterValues -> TimescaleDB when TSDB_DSN is set (ADR-0003
 	// preview: product-data plane, separate from the Prometheus ops metrics)
-	startTimescale()
+	startTimescale(handler)
 	// Run central system
 	log.Infof("starting central system on port %v", listenPort)
 	centralSystem.Start(listenPort, "/{ws}")

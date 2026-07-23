@@ -235,11 +235,15 @@ func (handler *CentralSystemHandler) OnStatusNotification(chargePointId string, 
 			"connector":         request.ConnectorId,
 		})
 		line := fmt.Sprintf("charger fault: connector %d · %s · %s · %s", request.ConnectorId, request.Status, faultCode, detail)
+		severity := "warning"
 		if request.Status == core.ChargePointStatusFaulted {
+			severity = "critical"
 			entry.Error(line)
 		} else {
 			entry.Warn(line)
 		}
+		// Durable copy (survives restarts; re-seeds the REST fault ring at boot).
+		go tsdbRecordFault(chargePointId, request.ConnectorId, string(request.Status), faultCode, request.VendorErrorCode, detail, severity)
 	}
 	if request.ConnectorId > 0 {
 		logDefault(chargePointId, request.GetFeatureName()).Infof("connector %v updated status to %v", request.ConnectorId, request.Status)

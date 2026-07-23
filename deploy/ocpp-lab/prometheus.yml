@@ -9,3 +9,7 @@ scrape_configs:
       - targets: ['central-system:2112']
         labels:
           service: ocpp-central-system
+  # Self-scrape: makes retention/TSDB health queryable (prometheus_* series).
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']

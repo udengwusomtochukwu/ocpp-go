@@ -243,12 +243,14 @@ func project(id string, st *ChargePointState) restCharger {
 	// The in-memory numbers above only cover the current CS process ("since
 	// boot"). With the meter store enabled they are replaced by a true 30-day
 	// projection from meter_samples that survives restarts (see tsdb.go).
+	faults30d := len(st.faults)
 	if ts, ok := tsdbStats(id); ok {
 		sessions30d, energy30dKwh = ts.sessions, roundTo(ts.kwh, 2)
 		avg30dKwh = 0
 		if ts.sessions > 0 {
 			avg30dKwh = roundTo(ts.kwh/float64(ts.sessions), 2)
 		}
+		faults30d = ts.faults
 	}
 
 	trace := make([]restTraceEntry, len(st.trace))
@@ -289,7 +291,7 @@ func project(id string, st *ChargePointState) restCharger {
 		Tickets:       []any{},
 		Stats: restStats{
 			Sessions30d: sessions30d, Energy30dKwh: energy30dKwh,
-			AvgSessionKwh: avg30dKwh, Faults30d: len(faults),
+			AvgSessionKwh: avg30dKwh, Faults30d: faults30d,
 		},
 	}
 }

@@ -25,6 +25,22 @@ CREATE TABLE IF NOT EXISTS meter_samples (
 -- Pre-existing volumes converge to the same shape (tsdb.go re-runs this).
 ALTER TABLE meter_samples ADD COLUMN IF NOT EXISTS is_sim boolean;
 
+-- Durable fault log (low volume — plain table). The CS re-seeds its in-memory
+-- REST fault ring from here at boot, so restarts no longer blank fault history.
+CREATE TABLE IF NOT EXISTS charger_faults (
+    ts                timestamptz NOT NULL,
+    charge_point      text        NOT NULL,
+    connector_id      int         NOT NULL DEFAULT 0,
+    status            text        NOT NULL DEFAULT '',
+    error_code        text        NOT NULL,
+    vendor_error_code text        NOT NULL DEFAULT '',
+    info              text        NOT NULL DEFAULT '',
+    severity          text        NOT NULL DEFAULT 'warning',
+    is_sim            boolean     NOT NULL DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS charger_faults_cp_ts_idx
+    ON charger_faults (charge_point, ts DESC);
+
 SELECT create_hypertable('meter_samples', 'ts', if_not_exists => TRUE);
 
 -- Session-centric access path: "samples of tx N on charger X, in time order".

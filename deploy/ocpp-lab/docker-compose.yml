@@ -83,6 +83,8 @@ services:
   prometheus:
     image: prom/prometheus:v2.54.1
     container_name: ocpp-lab-prometheus
+    environment:
+      - PROMCFG=selfscrape-v1  # bump to force a recreate when prometheus.yml changes (bind-mount edits alone don't)
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       # 7d comfortably covers the Operations dashboard's 24h default (and any

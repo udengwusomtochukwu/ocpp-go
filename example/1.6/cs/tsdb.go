@@ -49,7 +49,10 @@ type meterSample struct {
 	isSim         bool // false = allowlisted live hardware (see mode.go)
 }
 
-var tsdbCh chan meterSample // nil = writer disabled
+var (
+	tsdbCh   chan meterSample // nil = writer disabled
+	tsdbPool *pgxpool.Pool    // nil = store disabled; used by fault log + stats
+)
 
 // tsdbSchema mirrors deploy/ocpp-lab/timescale-init.sql. Applied idempotently
 // at writer start so a database volume that predates the init script (or a
@@ -74,6 +77,22 @@ var tsdbSchema = []string{
 	// Live/sim separation (mode.go): pre-existing volumes gain the column
 	// here; tsdbBackfillMode then classifies historical rows once.
 	`ALTER TABLE meter_samples ADD COLUMN IF NOT EXISTS is_sim boolean`,
+	// Durable fault log: the registry's in-memory fault ring dies with every
+	// CS restart, so faults are also persisted here (low volume — a plain
+	// table, no hypertable) and the ring is re-seeded from it at boot.
+	`CREATE TABLE IF NOT EXISTS charger_faults (
+		ts                timestamptz NOT NULL,
+		charge_point      text        NOT NULL,
+		connector_id      int         NOT NULL DEFAULT 0,
+		status            text        NOT NULL DEFAULT '',
+		error_code        text        NOT NULL,
+		vendor_error_code text        NOT NULL DEFAULT '',
+		info              text        NOT NULL DEFAULT '',
+		severity          text        NOT NULL DEFAULT 'warning',
+		is_sim            boolean     NOT NULL DEFAULT false
+	)`,
+	`CREATE INDEX IF NOT EXISTS charger_faults_cp_ts_idx
+		ON charger_faults (charge_point, ts DESC)`,
 }
 
 // tsdbPolicies are lifecycle knobs (compress after 7 days, drop after 90 —
@@ -91,7 +110,7 @@ var tsdbPolicies = []string{
 }
 
 // startTimescale launches the meter-sample writer when TSDB_DSN is set.
-func startTimescale() {
+func startTimescale(h *CentralSystemHandler) {
 	dsn, ok := os.LookupEnv(envVarTsdbDSN)
 	if !ok || dsn == "" {
 		log.Infof("tsdb: %v not set — meter-sample persistence disabled", envVarTsdbDSN)
@@ -109,6 +128,7 @@ func startTimescale() {
 		return
 	}
 	tsdbCh = make(chan meterSample, tsdbBufferSize)
+	tsdbPool = pool
 	// Seed the transaction counter past everything already recorded so tx ids
 	// stay unique across CS restarts (an in-memory counter that reset each
 	// redeploy caused distinct sessions to share ids and merge in per-session
@@ -123,7 +143,7 @@ func startTimescale() {
 		nextTransactionId = next
 		log.Infof("tsdb: transaction counter seeded from store: next id %d", next)
 	}
-	go tsdbWriter(pool)
+	go tsdbWriter(pool, h)
 }
 
 // tsdbEnqueue flattens one MeterValues.req into rows on the writer channel.
@@ -178,7 +198,7 @@ func tsdbEnqueue(chargePointID string, txID int, txStart time.Time, req *core.Me
 
 // tsdbWriter is the single consumer: ensures the schema (retrying while the
 // database container is still starting), then batch-inserts forever.
-func tsdbWriter(pool *pgxpool.Pool) {
+func tsdbWriter(pool *pgxpool.Pool, h *CentralSystemHandler) {
 	for {
 		if err := tsdbEnsureSchema(pool); err != nil {
 			log.Warnf("tsdb: schema not ready (database starting?): %v", err)
@@ -189,6 +209,7 @@ func tsdbWriter(pool *pgxpool.Pool) {
 	}
 	tsdbBackfillMode(pool)
 	tsdbApplyPolicies(pool)
+	tsdbPreloadFaults(pool, h)
 	go tsdbStatsRefresher(pool)
 	log.Info("tsdb: timescale meter-sample writer started")
 	batch := make([]meterSample, 0, tsdbBatchMax)
@@ -254,6 +275,66 @@ func tsdbEnsureSchema(pool *pgxpool.Pool) error {
 	return nil
 }
 
+// --- durable fault log ---
+
+// tsdbRecordFault persists one fault row (best-effort, never blocks the OCPP
+// path — callers run it in a goroutine). Low volume, so a direct insert.
+func tsdbRecordFault(chargePointID string, connectorID int, status, errorCode, vendorErrorCode, info, severity string) {
+	pool := tsdbPool
+	if pool == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if _, err := pool.Exec(ctx, `INSERT INTO charger_faults
+		(ts, charge_point, connector_id, status, error_code, vendor_error_code, info, severity, is_sim)
+		VALUES (now(), $1, $2, $3, $4, $5, $6, $7, $8)`,
+		chargePointID, connectorID, status, errorCode, vendorErrorCode, info, severity, !isLive(chargePointID)); err != nil {
+		log.Warnf("tsdb: fault row dropped: %v", err)
+	}
+}
+
+// tsdbPreloadFaults re-seeds each charge point's in-memory fault ring from the
+// durable log at boot (newest maxFaults per charger), so a CS restart no
+// longer blanks the REST fault history.
+func tsdbPreloadFaults(pool *pgxpool.Pool, h *CentralSystemHandler) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	rows, err := pool.Query(ctx, `SELECT charge_point, ts, error_code, info, severity FROM (
+			SELECT *, row_number() OVER (PARTITION BY charge_point ORDER BY ts DESC) AS rn
+			FROM charger_faults) f
+		WHERE rn <= $1 ORDER BY charge_point, ts DESC`, maxFaults)
+	if err != nil {
+		log.Warnf("tsdb: fault preload skipped: %v", err)
+		return
+	}
+	defer rows.Close()
+	byCP := map[string][]restFault{}
+	for rows.Next() {
+		var cp, code, info, severity string
+		var ts time.Time
+		if err := rows.Scan(&cp, &ts, &code, &info, &severity); err != nil {
+			log.Warnf("tsdb: fault preload scan failed: %v", err)
+			return
+		}
+		byCP[cp] = append(byCP[cp], restFault{
+			Time: ts.Format("2 Jan 15:04"), Code: code, Info: info, Severity: severity,
+		})
+	}
+	n := 0
+	for cp, faults := range byCP {
+		h.update(cp, func(st *ChargePointState) {
+			if len(st.faults) == 0 { // never clobber faults collected live
+				st.faults = faults // already newest-first
+			}
+		})
+		n += len(faults)
+	}
+	if n > 0 {
+		log.Infof("tsdb: preloaded %d persisted faults for %d chargers", n, len(byCP))
+	}
+}
+
 // --- REST stats projection ---
 // The registry's "30 d" stats used to come from the in-memory transaction map,
 // which every CS restart wipes — so "sessions30d" really meant "since boot".
@@ -264,6 +345,7 @@ func tsdbEnsureSchema(pool *pgxpool.Pool) error {
 type cpStats struct {
 	sessions int
 	kwh      float64
+	faults   int
 }
 
 const tsdbStatsRefresh = 60 * time.Second
@@ -343,7 +425,26 @@ func tsdbFetchStats(pool *pgxpool.Pool) (map[string]cpStats, error) {
 		}
 		m[cp] = s
 	}
-	return m, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	frows, err := pool.Query(ctx, `SELECT charge_point, count(*)::int
+		FROM charger_faults WHERE ts > now() - interval '30 days' GROUP BY 1`)
+	if err != nil {
+		return nil, err
+	}
+	defer frows.Close()
+	for frows.Next() {
+		var cp string
+		var n int
+		if err := frows.Scan(&cp, &n); err != nil {
+			return nil, err
+		}
+		s := m[cp]
+		s.faults = n
+		m[cp] = s
+	}
+	return m, frows.Err()
 }
 
 // tsdbFlush inserts one batch; on error the batch is dropped (lab-grade —

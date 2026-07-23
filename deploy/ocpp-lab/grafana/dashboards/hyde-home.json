@@ -793,14 +793,14 @@
       "type": "text",
       "title": "",
       "gridPos": {
-        "h": 9,
+        "h": 12,
         "w": 12,
         "x": 0,
         "y": 17
       },
       "options": {
         "mode": "markdown",
-        "content": "### Dashboards\n\n**[HYDE · Overview](/grafana/d/hyde-overview)** — the stakeholder view: today, the last 30 days, and the grid advantage\n\n**[HYDE · Operations](/grafana/d/hyde-operations)** — service health, faults, commands, tariff, firmware & connector wear\n\n**[HYDE · Sessions](/grafana/d/ocpp-sessions)** — every charging session in engineering detail\n\n**[HYDE · Registry](/grafana/d/ocpp-registry)** — OCPP protocol counters, raw telemetry, logs & traces\n\n**[HYDE · OCPP Messages](/grafana/d/ocpp-messages)** — the charger's OCPP conversation, human-readable and filterable\n\n*Times shown in your browser's timezone. All dashboards default to LIVE hardware data; use each dashboard's `mode` picker to view simulator/test data.*"
+        "content": "### Dashboards\n\n**[HYDE · Overview](/grafana/d/hyde-overview)** — the stakeholder view: today, the last 30 days, and the grid advantage\n\n**[HYDE · Operations](/grafana/d/hyde-operations)** — service health, faults, commands, tariff, firmware & connector wear\n\n**[HYDE · Sessions](/grafana/d/ocpp-sessions)** — every charging session in engineering detail\n\n**[HYDE · Registry](/grafana/d/ocpp-registry)** — OCPP protocol counters, raw telemetry, logs & traces\n\n**[HYDE · OCPP Messages](/grafana/d/ocpp-messages)** — the charger's OCPP conversation, human-readable and filterable\n\n### Planes & tools\n\n**[Alerting](/grafana/alerting/list)** — alert rules & firing state (folder “OCPP Lab”)\n\n**[Explore](/grafana/explore)** — ad-hoc queries across metrics (Prometheus), logs (Loki) and the session store (Timescale)\n\n**[Traces — Jaeger](https://ocpp-lab.hydecharge.com/jaeger)** — per-message OCPP traces with log correlation\n\n**[Control API & docs](https://ocpp-lab.hydecharge.com/api/docs)** — the REST/SSE surface the backend and EVCMS use (reads open; writes token-gated)\n\n*Times shown in your browser's timezone. All dashboards default to LIVE hardware data; use each dashboard's `mode` picker to view simulator/test data.*"
       }
     },
     {
@@ -808,7 +808,7 @@
       "type": "text",
       "title": "",
       "gridPos": {
-        "h": 9,
+        "h": 12,
         "w": 12,
         "x": 12,
         "y": 17

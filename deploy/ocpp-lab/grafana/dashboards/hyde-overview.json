@@ -383,7 +383,7 @@
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "The charger’s internal battery (one share per gun side) that tops up fast charging beyond what the grid feed alone could deliver. High = full boost capacity available; it dips while boosting a car and slowly refills from the grid afterwards. Latest reading — the charger reports it roughly every 15 minutes, even when idle.",
+      "description": "The charger’s internal battery (one share per gun side) that tops up fast charging beyond what the grid feed alone could deliver. High = full boost capacity available; it dips while boosting a car and slowly refills from the grid afterwards. Latest reading — the charger reports it roughly every 15 minutes, even when idle.\n\nSoC is reported over the buffer's USABLE window (160 kWh; nominal 193.5 kWh, 5-95% pack window) — 100% = 160 kWh deliverable.",
       "gridPos": {
         "h": 5,
         "w": 12,

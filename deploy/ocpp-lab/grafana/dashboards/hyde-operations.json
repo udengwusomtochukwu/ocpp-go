@@ -1210,7 +1210,7 @@
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "State of charge of the charger’s internal buffer battery, per gun side, over the selected range. The battery-buffered signature: it dips while boosting a car beyond what the grid feed (~43 kW at the 63 A setting here) delivers, then refills slowly from the grid between sessions — a full recharge takes on the order of hours. Reported roughly every 15 minutes while the charger is connected; the line bridges gaps up to 45 minutes, longer gaps mean the charger was offline.",
+      "description": "State of charge of the charger’s internal buffer battery, per gun side, over the selected range. The battery-buffered signature: it dips while boosting a car beyond what the grid feed (~43 kW at the 63 A setting here) delivers, then refills slowly from the grid between sessions — a full recharge takes on the order of hours. Reported roughly every 15 minutes while the charger is connected; the line bridges gaps up to 45 minutes, longer gaps mean the charger was offline.\n\nSoC is reported over the buffer's USABLE window (160 kWh; nominal 193.5 kWh, 5-95% pack window) — 100% = 160 kWh deliverable.",
       "gridPos": {
         "h": 9,
         "w": 12,

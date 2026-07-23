@@ -81,6 +81,7 @@ components:
         capabilities: { type: array, items: { type: string } }
         status: { type: string, enum: [online, charging, offline, faulted] }
         simulated: { type: boolean, description: "true unless the charge-point id is on the LIVE_CHARGER_IDS allowlist (real hardware)" }
+        ledState: { type: string, enum: [offline, blue_flashing, blue, green_flashing, green, red_flashing, red], description: "derived status light per the vendor LED table (charging state, availability, buffer charging, faults)" }
         endpoint: { type: string, example: "wss://ocpp-lab.hydecharge.com/CP42" }
         lastHeartbeat: { type: string, example: "4s ago" }
         lastBoot: { type: string, example: "13 Jul 14:02" }

@@ -69,6 +69,9 @@ func pollGrid(h *CentralSystemHandler) {
 				continue
 			}
 			grid[gk] = v
+			if gk == gridImportKey {
+				setGridImportW(id, v) // feeds the derived LED state (led.go)
+			}
 			if tsdbCh != nil {
 				select {
 				case tsdbCh <- meterSample{

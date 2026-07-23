@@ -282,6 +282,8 @@ func main() {
 	log.Infof("mode: live charger allowlist = %v — everything else is sim", liveIDList())
 	// hyde/lab: OTel/Prometheus registry metrics on /metrics
 	startMetrics()
+	// hyde/lab: derived charger status light (vendor LED table) — metric + REST
+	startLedTicker(handler)
 	// hyde/lab: REST + SSE surface (registry, commands, events) on API_PORT
 	startREST(handler)
 	// hyde/lab: measured grid-side intake via vendor config keys -> Timescale

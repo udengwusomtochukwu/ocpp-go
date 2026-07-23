@@ -863,7 +863,7 @@
       "datasource": {
         "uid": "prometheus"
       },
-      "description": "Fed by the Power.Active.Import measurand from MeterValues (ocpp_power_w) — a DIRECT instantaneous reading, not derived from the energy counter via rate() (deriving power from cumulative energy is lossy and laggy — Grafana community #38310). Fleet-wide last report; zeroed when a transaction stops. The software sim never sends this measurand, so the gauge reads 'no charger reporting' unless a real charger is on a session. Scale spans the PEAK330-class machine (330 kW max boost; measured session peak so far: 147 kW).",
+      "description": "Fed by the Power.Active.Import measurand from MeterValues (ocpp_power_w) — a DIRECT instantaneous reading, not derived from the energy counter via rate() (deriving power from cumulative energy is lossy and laggy — Grafana community #38310). Fleet-wide last report; zeroed when a transaction stops. The software sim never sends this measurand, so the gauge reads 'no charger reporting' unless a real charger is on a session. Scale spans the PEAK330-class machine (330 kW max boost; measured session peak so far: 147 kW).\n\nScale = the PEAK250's rated total output at our 63 A feed: 250 kW (150 kW per gun, dynamically shared).",
       "gridPos": {
         "h": 8,
         "w": 6,
@@ -874,7 +874,7 @@
         "defaults": {
           "unit": "watt",
           "min": 0,
-          "max": 350000,
+          "max": 250000,
           "noValue": "no charger reporting",
           "thresholds": {
             "mode": "absolute",

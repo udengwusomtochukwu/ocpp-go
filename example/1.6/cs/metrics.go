@@ -54,6 +54,7 @@ var (
 	mPower     metric.Float64Gauge // ocpp_power_w        <- Power.Active.Import
 	mEnergyReg metric.Float64Gauge // ocpp_energy_register_wh{direction} <- Energy.Active.*.Register
 	mSoC       metric.Float64Gauge // ocpp_soc_percent    <- SoC
+	mLedState  metric.Int64Gauge   // ocpp_led_state{mode} — derived charger light (led.go codes)
 	// power-seen flags are per mode: the gauge is zeroed at tx stop only for
 	// the mode series that ever reported power, so live/sim stay independent.
 	powerSeenLive atomic.Bool
@@ -172,6 +173,11 @@ func modeAttr(chargePointID string) attribute.KeyValue {
 	return attribute.String("mode", modeOf(chargePointID))
 }
 
+// modeAttrValue builds the same label from an already-resolved mode string.
+func modeAttrValue(mode string) attribute.KeyValue {
+	return attribute.String("mode", mode)
+}
+
 func powerSeenFlag(chargePointID string) *atomic.Bool {
 	if isLive(chargePointID) {
 		return &powerSeenLive
@@ -214,6 +220,8 @@ func startMetrics() {
 		metric.WithDescription("Energy register reading (Wh) from Energy.Active.{Import,Export}.Register meter samples, by direction"))
 	mSoC, _ = meter.Float64Gauge("ocpp.soc.percent",
 		metric.WithDescription("EV state of charge (percent) from SoC meter samples"))
+	mLedState, _ = meter.Int64Gauge("ocpp.led.state",
+		metric.WithDescription("Derived charger status light per mode: 0 offline, 1 starting, 2 buffer charging (blue), 3 charging vehicle (green flashing), 4 available (green), 5 recalibration/unavailable (red flashing), 6 fault (red)"))
 	mChargerInfo, _ = meter.Float64Gauge("ocpp.charger.info",
 		metric.WithDescription("Charger identity; value always 1, labels carry vendor/model/firmware"))
 	mTariffPrice, _ = meter.Float64Gauge("ocpp.tariff.price_per_kwh",

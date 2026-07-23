@@ -781,7 +781,7 @@
       "id": 15,
       "type": "timeseries",
       "title": "Buffer battery SoC (grid-side view)",
-      "description": "Checked live: this firmware exposes no grid-side measurands over OCPP (no location='Inlet' rows — only Outlet, SoC@EV and SoC@Body), so grid draw vs car draw can't be plotted directly. What it does send is SoC at location='Body': the PEAK250's internal buffer battery, reported per gun side every ~15 min even while idle. The battery-buffered signature is visible here instead — the buffer dips while a car draws more than the grid feed, then recharges slowly afterwards.\n\nAlways covers the last 24 hours (panel time override), even when the dashboard is zoomed into a single session.",
+      "description": "Checked live: this firmware exposes no grid-side measurands over OCPP (no location='Inlet' rows — only Outlet, SoC@EV and SoC@Body), so grid draw vs car draw can't be plotted directly. What it does send is SoC at location='Body': the PEAK250's internal buffer battery, reported per gun side every ~15 min even while idle. The battery-buffered signature is visible here instead — the buffer dips while a car draws more than the grid feed, then recharges slowly afterwards.\n\nAlways covers the last 24 hours (panel time override), even when the dashboard is zoomed into a single session.\n\nSoC is reported over the buffer's USABLE window (160 kWh; nominal 193.5 kWh, 5-95% pack window) — 100% = 160 kWh deliverable.",
       "gridPos": {
         "h": 9,
         "w": 12,

@@ -86,6 +86,7 @@ type restCharger struct {
 	Capabilities      []string        `json:"capabilities"`
 	Status            string          `json:"status"` // online|charging|offline|faulted
 	Simulated         bool            `json:"simulated"` // additive: true unless on the LIVE_CHARGER_IDS allowlist
+	LedState          string          `json:"ledState"`  // additive: derived status light (led.go / vendor LED table)
 	Endpoint          string          `json:"endpoint"`
 	LastHeartbeat     string          `json:"lastHeartbeat"`
 	LastBoot          string          `json:"lastBoot"`
@@ -276,6 +277,7 @@ func project(id string, st *ChargePointState) restCharger {
 		Capabilities: []string{"Remote start/stop", "Smart charging", "Remote trigger"},
 		Status:       status,
 		Simulated:    !isLive(id),
+		LedState:     ledStateName(id, st),
 		Endpoint:     publicWsBase() + "/" + id,
 		LastHeartbeat: humanizeSince(st.lastSeen),
 		LastBoot:      fmtDay(st.lastBoot),

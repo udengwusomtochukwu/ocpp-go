@@ -448,7 +448,7 @@
     {
       "id": 101,
       "type": "row",
-      "title": "Today & the selected period",
+      "title": "Today & the last 30 days",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -573,12 +573,12 @@
     {
       "id": 7,
       "type": "stat",
-      "title": "Avg energy per session",
+      "title": "Avg energy per session (30 d)",
       "datasource": {
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "Average energy delivered per finished session in the selected time range. Sessions still in progress are excluded so the average is not dragged down by half-done charges.",
+      "description": "Average energy delivered per finished session in the selected time range. Sessions still in progress are excluded so the average is not dragged down by half-done charges.\n\nPinned window: always the last 30 days, regardless of the dashboard time range.",
       "gridPos": {
         "h": 5,
         "w": 3,
@@ -623,19 +623,19 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT round(avg(kwh)::numeric, 1) AS \"avg kWh\" FROM sessions WHERE NOT is_live AND kwh IS NOT NULL AND $__timeFilter(start_ts) AND EXTRACT(isodow FROM start_ts AT TIME ZONE 'Europe/Stockholm') IN ($weekday)"
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT round(avg(kwh)::numeric, 1) AS \"avg kWh\" FROM sessions WHERE NOT is_live AND kwh IS NOT NULL AND start_ts > now() - interval '30 days' AND EXTRACT(isodow FROM start_ts AT TIME ZONE 'Europe/Stockholm') IN ($weekday)"
         }
       ]
     },
     {
       "id": 8,
       "type": "stat",
-      "title": "Avg session length",
+      "title": "Avg session length (30 d)",
       "datasource": {
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "Average length of finished sessions in the selected range, measured from a session’s first meter report to its last (this includes the pre-charge handshake of a few minutes). In-progress sessions are excluded.",
+      "description": "Average length of finished sessions in the selected range, measured from a session’s first meter report to its last (this includes the pre-charge handshake of a few minutes). In-progress sessions are excluded.\n\nPinned window: always the last 30 days, regardless of the dashboard time range.",
       "gridPos": {
         "h": 5,
         "w": 3,
@@ -680,19 +680,19 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT round(avg(dur_s)) AS \"avg seconds\" FROM sessions WHERE NOT is_live AND $__timeFilter(start_ts) AND EXTRACT(isodow FROM start_ts AT TIME ZONE 'Europe/Stockholm') IN ($weekday)"
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT round(avg(dur_s)) AS \"avg seconds\" FROM sessions WHERE NOT is_live AND start_ts > now() - interval '30 days' AND EXTRACT(isodow FROM start_ts AT TIME ZONE 'Europe/Stockholm') IN ($weekday)"
         }
       ]
     },
     {
       "id": 9,
       "type": "piechart",
-      "title": "How sessions ended",
+      "title": "How sessions ended (30 d)",
       "datasource": {
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "Outcome of each session in the selected range, judged from its power curve. 'Completed' = power tapered off at the end, the normal full-battery finish. 'Stopped early' = the session ended while still drawing hard — cable pulled or stop pressed. 'No charge recorded' = a session that never delivered measurable power (includes the software test rigs, which report no power data, and real cases like a car that plugged in but never started drawing). Sessions still reporting are 'In progress' and get no verdict. Charger hardware faults are tracked on the Operations dashboard.",
+      "description": "Outcome of each session in the selected range, judged from its power curve. 'Completed' = power tapered off at the end, the normal full-battery finish. 'Stopped early' = the session ended while still drawing hard — cable pulled or stop pressed. 'No charge recorded' = a session that never delivered measurable power (includes the software test rigs, which report no power data, and real cases like a car that plugged in but never started drawing). Sessions still reporting are 'In progress' and get no verdict. Charger hardware faults are tracked on the Operations dashboard.\n\nPinned window: always the last 30 days, regardless of the dashboard time range.",
       "gridPos": {
         "h": 10,
         "w": 6,
@@ -807,19 +807,19 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT CASE WHEN is_live THEN 'In progress' WHEN n_power = 0 OR peak_kw IS NULL OR peak_kw = 0 THEN 'No charge recorded' WHEN tail_kw < 0.10 * peak_kw THEN 'Completed - car tapered off' ELSE 'Stopped early - still drawing hard' END AS \"outcome\", count(*)::int AS \"sessions\" FROM sessions WHERE $__timeFilter(start_ts) AND EXTRACT(isodow FROM start_ts AT TIME ZONE 'Europe/Stockholm') IN ($weekday) GROUP BY 1 ORDER BY 2 DESC"
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT CASE WHEN is_live THEN 'In progress' WHEN n_power = 0 OR peak_kw IS NULL OR peak_kw = 0 THEN 'No charge recorded' WHEN tail_kw < 0.10 * peak_kw THEN 'Completed - car tapered off' ELSE 'Stopped early - still drawing hard' END AS \"outcome\", count(*)::int AS \"sessions\" FROM sessions WHERE start_ts > now() - interval '30 days' AND EXTRACT(isodow FROM start_ts AT TIME ZONE 'Europe/Stockholm') IN ($weekday) GROUP BY 1 ORDER BY 2 DESC"
         }
       ]
     },
     {
       "id": 10,
       "type": "bargauge",
-      "title": "Gun utilization",
+      "title": "Gun utilization (30 d)",
       "datasource": {
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "Share of the selected period each gun spent in an active charging session (including the pre-charge handshake). Small percentages are normal for a site this new — the bar makes growth visible over time. Not affected by the weekday filter — it always covers the whole selected period.",
+      "description": "Share of the selected period each gun spent in an active charging session (including the pre-charge handshake). Small percentages are normal for a site this new — the bar makes growth visible over time. Not affected by the weekday filter — it always covers the whole selected period.\n\nPinned window: always the last 30 days, regardless of the dashboard time range.",
       "gridPos": {
         "h": 10,
         "w": 6,
@@ -905,7 +905,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT charge_point || ' · ' || CASE connector_id WHEN 1 THEN 'Gun A' WHEN 2 THEN 'Gun B' ELSE 'Conn ' || connector_id END AS \"gun\", round(count(DISTINCT time_bucket('1 minute', ts)) * 100.0 / GREATEST(EXTRACT(EPOCH FROM ($__timeTo()::timestamptz - $__timeFrom()::timestamptz)) / 60, 1), 1) AS \"busy\" FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND transaction_id IS NOT NULL AND $__timeFilter(ts) GROUP BY 1 ORDER BY 1"
+          "rawSql": "SELECT charge_point || ' · ' || CASE connector_id WHEN 1 THEN 'Gun A' WHEN 2 THEN 'Gun B' ELSE 'Conn ' || connector_id END AS \"gun\", round(count(DISTINCT time_bucket('1 minute', ts)) * 100.0 / GREATEST(EXTRACT(EPOCH FROM (interval '30 days')) / 60, 1), 1) AS \"busy\" FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND transaction_id IS NOT NULL AND ts > now() - interval '30 days' GROUP BY 1 ORDER BY 1"
         }
       ],
       "transformations": [
@@ -918,12 +918,12 @@
     {
       "id": 11,
       "type": "barchart",
-      "title": "Sessions per day",
+      "title": "Sessions per day (last 30 days)",
       "datasource": {
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "Charging sessions started on each local day (CEST) in the selected range, across all chargers. Days with no sessions show as zero — a true zero, not missing data.",
+      "description": "Charging sessions started on each local day (CEST) in the selected range, across all chargers. Days with no sessions show as zero — a true zero, not missing data.\n\nPinned window: always the last 30 days, regardless of the dashboard time range.",
       "gridPos": {
         "h": 5,
         "w": 6,
@@ -977,19 +977,19 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT to_char(d.day, 'YYYY-MM-DD') AS \"day\", count(s.start_ts)::int AS \"sessions\" FROM generate_series(date_trunc('day', $__timeFrom() AT TIME ZONE 'Europe/Stockholm'), date_trunc('day', $__timeTo() AT TIME ZONE 'Europe/Stockholm'), interval '1 day') AS d(day) LEFT JOIN sessions s ON date_trunc('day', s.start_ts AT TIME ZONE 'Europe/Stockholm') = d.day WHERE EXTRACT(isodow FROM d.day) IN ($weekday) GROUP BY d.day ORDER BY d.day"
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT to_char(d.day, 'YYYY-MM-DD') AS \"day\", count(s.start_ts)::int AS \"sessions\" FROM generate_series(date_trunc('day', (now() - interval '30 days') AT TIME ZONE 'Europe/Stockholm'), date_trunc('day', now() AT TIME ZONE 'Europe/Stockholm'), interval '1 day') AS d(day) LEFT JOIN sessions s ON date_trunc('day', s.start_ts AT TIME ZONE 'Europe/Stockholm') = d.day WHERE EXTRACT(isodow FROM d.day) IN ($weekday) GROUP BY d.day ORDER BY d.day"
         }
       ]
     },
     {
       "id": 12,
       "type": "barchart",
-      "title": "Energy per day",
+      "title": "Energy per day (last 30 days)",
       "datasource": {
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "Energy delivered per local day (CEST). A session’s energy counts on the day it started. Zero bars are true zeros.",
+      "description": "Energy delivered per local day (CEST). A session’s energy counts on the day it started. Zero bars are true zeros.\n\nPinned window: always the last 30 days, regardless of the dashboard time range.",
       "gridPos": {
         "h": 5,
         "w": 6,
@@ -1043,22 +1043,22 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT to_char(d.day, 'YYYY-MM-DD') AS \"day\", COALESCE(round(sum(s.kwh)::numeric, 1), 0) AS \"kWh\" FROM generate_series(date_trunc('day', $__timeFrom() AT TIME ZONE 'Europe/Stockholm'), date_trunc('day', $__timeTo() AT TIME ZONE 'Europe/Stockholm'), interval '1 day') AS d(day) LEFT JOIN sessions s ON date_trunc('day', s.start_ts AT TIME ZONE 'Europe/Stockholm') = d.day WHERE EXTRACT(isodow FROM d.day) IN ($weekday) GROUP BY d.day ORDER BY d.day"
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT to_char(d.day, 'YYYY-MM-DD') AS \"day\", COALESCE(round(sum(s.kwh)::numeric, 1), 0) AS \"kWh\" FROM generate_series(date_trunc('day', (now() - interval '30 days') AT TIME ZONE 'Europe/Stockholm'), date_trunc('day', now() AT TIME ZONE 'Europe/Stockholm'), interval '1 day') AS d(day) LEFT JOIN sessions s ON date_trunc('day', s.start_ts AT TIME ZONE 'Europe/Stockholm') = d.day WHERE EXTRACT(isodow FROM d.day) IN ($weekday) GROUP BY d.day ORDER BY d.day"
         }
       ]
     },
     {
       "id": 15,
       "type": "marcusolsson-calendar-panel",
-      "title": "Session calendar — drag days to filter",
+      "title": "Session calendar (last 30 days)",
       "datasource": {
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "Every charging session as a calendar entry (gun + energy). This is also a filter: click-drag across days — or use the toolbar views — to set the whole dashboard’s time range; every panel follows. The calendar tracks the dashboard range, so widen the range picker to see further back.",
+      "description": "Every charging session as a calendar entry (gun + energy). This is also a filter: click-drag across days — or use the toolbar views — to set the whole dashboard’s time range; every panel follows. The calendar tracks the dashboard range, so widen the range picker to see further back.\n\nPinned window: always the last 30 days, regardless of the dashboard time range. Dragging days still sets the dashboard range for the range-driven panels (e.g. the grid-draw chart).",
       "gridPos": {
         "h": 11,
-        "w": 6,
+        "w": 8,
         "x": 0,
         "y": 27
       },
@@ -1110,10 +1110,7 @@
         "timeField": "time",
         "timeRangeType": "default",
         "views": [
-          "day",
-          "week",
-          "month",
-          "agenda"
+          "month"
         ]
       },
       "targets": [
@@ -1125,7 +1122,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT start_ts AS \"time\", end_ts AS \"end\", CASE connector_id WHEN 1 THEN 'Gun A' WHEN 2 THEN 'Gun B' ELSE 'Conn ' || connector_id END || COALESCE(' · ' || round(kwh::numeric, 1) || ' kWh', '') AS \"session\", charge_point AS \"charge point\" FROM sessions WHERE $__timeFilter(start_ts) AND EXTRACT(isodow FROM start_ts AT TIME ZONE 'Europe/Stockholm') IN ($weekday) ORDER BY start_ts"
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT start_ts AS \"time\", end_ts AS \"end\", CASE connector_id WHEN 1 THEN 'A' WHEN 2 THEN 'B' ELSE connector_id::text END || COALESCE(' · ' || round(kwh::numeric) || ' kWh', '') AS \"session\", charge_point AS \"charge point\" FROM sessions WHERE start_ts > now() - interval '30 days' AND EXTRACT(isodow FROM start_ts AT TIME ZONE 'Europe/Stockholm') IN ($weekday) ORDER BY start_ts"
         }
       ]
     },
@@ -1140,8 +1137,8 @@
       "description": "Number of sessions started in each hour of the day (columns, 00–23 local CEST time) per weekday (rows), over the selected range. Brighter cells = more sessions; blank cells are true zeros. With the default 7-day range each cell is a single specific day. Green tones are deliberately capped so the count stays readable (>=4.5:1) in every cell. All seven weekdays always show (filtered by the weekday variable); a blank day simply had no sessions in the selected range.\n\nPinned window: this panel always shows the last 30 days of charging habits regardless of the dashboard time range — it answers 'when do cars charge', not 'what happened in the selected window'. The weekday filter still applies.",
       "gridPos": {
         "h": 11,
-        "w": 18,
-        "x": 6,
+        "w": 16,
+        "x": 8,
         "y": 27
       },
       "transformations": [

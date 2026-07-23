@@ -69,6 +69,26 @@ var (
 	mPlugCycles  metric.Float64Gauge // ocpp_plug_cycles{connector,mode}
 )
 
+// Currency-labelled gauges have the same stale-label class as chargerInfoSeen:
+// were the configured currency ever to change, the old-currency series would
+// keep exporting its last price and max()-style panels could pick the stale
+// value. Remember the last currency per charge point and zero the old series.
+var (
+	commercialMu        sync.Mutex
+	tariffCurrencySeen  = map[string]string{} // charge point id -> currency
+	preauthCurrencySeen = map[string]string{}
+)
+
+func zeroStaleCurrency(g metric.Float64Gauge, seen map[string]string, chargePointID, currency string, mode attribute.KeyValue) {
+	commercialMu.Lock()
+	prev := seen[chargePointID]
+	seen[chargePointID] = currency
+	commercialMu.Unlock()
+	if prev != "" && prev != currency {
+		g.Record(context.Background(), 0, metric.WithAttributes(attribute.String("currency", prev), mode))
+	}
+}
+
 // recordCommercial publishes tariff, pre-authorization and plug-cycle wear from
 // polled config keys. Currency amounts arrive in minor units (öre for SEK) and
 // are stored as major units. Returns a map for the SSE 'commercial' event.
@@ -81,11 +101,13 @@ func recordCommercial(chargePointID string, kv map[string]string) map[string]any
 	}
 	if raw, err := strconv.ParseFloat(strings.TrimSpace(kv[priceKey]), 64); err == nil && mTariffPrice != nil {
 		major := raw / 100
+		zeroStaleCurrency(mTariffPrice, tariffCurrencySeen, chargePointID, currency, mode)
 		mTariffPrice.Record(context.Background(), major, metric.WithAttributes(attribute.String("currency", currency), mode))
 		out["price_per_kwh"], out["currency"] = major, currency
 	}
 	if raw, err := strconv.ParseFloat(strings.TrimSpace(kv[preauthKey]), 64); err == nil && mPreauth != nil {
 		major := raw / 100
+		zeroStaleCurrency(mPreauth, preauthCurrencySeen, chargePointID, currency, mode)
 		mPreauth.Record(context.Background(), major, metric.WithAttributes(attribute.String("currency", currency), mode))
 		out["preauth_amount"] = major
 	}

@@ -146,17 +146,25 @@ func (handler *CentralSystemHandler) OnMeterValues(chargePointId string, request
 	}
 	// Resolve the connector's in-progress transaction while holding the lock —
 	// the sim (like many chargers) omits transactionId on MeterValues.req, so
-	// session attribution for the raw store comes from connector state.
+	// session attribution for the raw store comes from connector state. The
+	// transaction's start time rides along: the FlexPole bundles the pending
+	// clock-aligned buffer reading (stamped up to 15 min in the past) into the
+	// first in-transaction MeterValues batch, and blanket-tagging it snapped
+	// every session start back to the previous quarter-hour mark.
 	txID := -1
+	var txStart time.Time
 	handler.update(chargePointId, func(st *ChargePointState) {
 		if ci, ok := st.connectors[request.ConnectorId]; ok {
 			txID = ci.currentTransaction
+			if tx, ok := st.transactions[txID]; ok && tx.startTime != nil {
+				txStart = tx.startTime.Time
+			}
 		}
 		st.pushTrace("in", request.GetFeatureName(),
 			fmt.Sprintf("connector %d · %s %s", request.ConnectorId, sampleVal, sampleUnit))
 	})
-	recordMeterValues(chargePointId, request) // power / energy-register / SoC gauges by measurand (mode-labelled)
-	tsdbEnqueue(chargePointId, txID, request) // raw per-session samples -> TimescaleDB (is_sim-flagged)
+	recordMeterValues(chargePointId, request)          // power / energy-register / SoC gauges by measurand (mode-labelled)
+	tsdbEnqueue(chargePointId, txID, txStart, request) // raw per-session samples -> TimescaleDB (is_sim-flagged)
 	bus.Publish(Event{Type: "meter", Charger: chargePointId, Data: map[string]any{
 		"connectorId": request.ConnectorId, "value": sampleVal, "unit": sampleUnit,
 	}})

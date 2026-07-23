@@ -128,7 +128,12 @@ func startTimescale() {
 // tsdbEnqueue flattens one MeterValues.req into rows on the writer channel.
 // txID is the connector's transaction resolved under handler.mu; an explicit
 // transactionId on the request wins. Never blocks: drops on a full buffer.
-func tsdbEnqueue(chargePointID string, txID int, req *core.MeterValuesRequest) {
+//
+// txStart guards attribution: a MeterValue stamped before the transaction
+// began (the charger flushes queued clock-aligned readings inside the first
+// in-tx batch) is stored as an outside-transaction sample — otherwise every
+// session's min(ts) snaps back to the previous 15-minute boundary.
+func tsdbEnqueue(chargePointID string, txID int, txStart time.Time, req *core.MeterValuesRequest) {
 	if tsdbCh == nil {
 		return
 	}
@@ -140,6 +145,10 @@ func tsdbEnqueue(chargePointID string, txID int, req *core.MeterValuesRequest) {
 		ts := time.Now()
 		if mv.Timestamp != nil {
 			ts = mv.Timestamp.Time
+		}
+		mvTxID := txID
+		if mvTxID >= 0 && !txStart.IsZero() && ts.Before(txStart) {
+			mvTxID = -1
 		}
 		for _, sv := range mv.SampledValue {
 			v, err := strconv.ParseFloat(strings.TrimSpace(sv.Value), 64)
@@ -153,7 +162,7 @@ func tsdbEnqueue(chargePointID string, txID int, req *core.MeterValuesRequest) {
 			}
 			sample := meterSample{
 				ts: ts, chargePoint: chargePointID, connectorID: req.ConnectorId,
-				transactionID: txID, measurand: measurand, phase: string(sv.Phase),
+				transactionID: mvTxID, measurand: measurand, phase: string(sv.Phase),
 				location: string(sv.Location), unit: string(sv.Unit), value: v,
 				isSim: isSim,
 			}

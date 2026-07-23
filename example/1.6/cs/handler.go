@@ -392,21 +392,263 @@ func logDefault(chargePointId string, feature string) *logrus.Entry {
 // featureNamer is satisfied by every ocpp-go request and confirmation type.
 type featureNamer interface{ GetFeatureName() string }
 
-// logFrame records a complete OCPP message payload to the log pipeline
-// (logrus -> OTLP -> Loki -> Grafana). The vendor's diagnostics UI (zdenergy
-// /#/log) prints the raw CALL/CALLRESULT frame; this gives the same content but
-// parsed and queryable — `message` is the action, `dir` is in/out, `mode`
-// follows the live/sim switch, and the marshalled body rides as the `payload`
-// structured field (also the log line, so it's readable without expanding).
-// Handlers keep their own human-readable Infof lines; this is the
-// machine-complete record the "OCPP Messages" dashboard renders.
+// maxPayloadBytes caps the `payload` field. A StopTransaction can carry
+// hundreds of transactionData samples (~100 KB); the summary line already
+// names what matters and the raw samples live in Timescale, so an oversized
+// blob is clipped rather than shipped to Loki whole.
+const maxPayloadBytes = 32 * 1024
+
+// logFrame records one OCPP message. The log LINE is a human-readable
+// diagnostic sentence — what happened, on which connector, with which code —
+// so the Messages dashboard scans the way an operator reads a log, not as a
+// wall of JSON. The COMPLETE object rides alongside in the `payload`
+// structured field, one click away by expanding the line in Grafana. The
+// action is `message`, direction is `dir`, live/sim is `mode` — all queryable.
 func logFrame(chargePointId, dir string, msg featureNamer) {
 	payload, err := json.Marshal(msg)
 	if err != nil {
 		payload = []byte(fmt.Sprintf("%+v", msg))
 	}
+	if len(payload) > maxPayloadBytes {
+		payload = []byte(fmt.Sprintf("%s…[clipped, %d bytes total]", payload[:maxPayloadBytes], len(payload)))
+	}
 	logDefault(chargePointId, msg.GetFeatureName()).
 		WithField("dir", dir).
 		WithField("payload", string(payload)).
-		Info(string(payload))
+		Info(describeFrame(msg))
+}
+
+// describeFrame renders one OCPP message as a diagnostic sentence. Because
+// the full object always ships in `payload`, this line is free to be prose:
+// the thing an operator actually scans for. Message types without bespoke
+// phrasing fall back to the action name.
+func describeFrame(msg featureNamer) string {
+	switch m := msg.(type) {
+
+	// Connector + fault status — the line operators scan first.
+	case *core.StatusNotificationRequest:
+		where, when := connLabel(m.ConnectorId), stamp(m.Timestamp)
+		if code, faulted := faultClass(m); faulted {
+			s := "FAULT on " + where
+			if when != "" {
+				s += " at " + when
+			}
+			s += " — " + code
+			if m.VendorErrorCode != "" {
+				s += " (vendor " + m.VendorErrorCode + ")"
+			}
+			if m.Info != "" {
+				s += ": " + m.Info
+			}
+			return s
+		}
+		s := fmt.Sprintf("%s is %s", where, m.Status)
+		if when != "" {
+			s += " (reported " + when + ")"
+		}
+		if m.Info != "" {
+			s += " — " + m.Info
+		}
+		return s
+
+	// Identity — vendor/model/firmware is the whole point of a boot.
+	case *core.BootNotificationRequest:
+		s := fmt.Sprintf("Booted: %s %s", m.ChargePointVendor, m.ChargePointModel)
+		if m.ChargePointSerialNumber != "" {
+			s += " (serial " + m.ChargePointSerialNumber + ")"
+		}
+		if m.FirmwareVersion != "" {
+			s += " on firmware " + m.FirmwareVersion
+		}
+		if m.MeterType != "" {
+			s += " · meter " + m.MeterType
+		}
+		return s
+	case *core.BootNotificationConfirmation:
+		return fmt.Sprintf("Boot %s — heartbeat every %ds (clock %s)", m.Status, m.Interval, stamp(m.CurrentTime))
+
+	case *core.HeartbeatRequest:
+		return "Heartbeat"
+
+	case *core.AuthorizeRequest:
+		return "Authorize requested for idTag " + m.IdTag
+	case *core.AuthorizeConfirmation:
+		return "Authorize " + idTagStatus(m.IdTagInfo)
+
+	case *core.StartTransactionRequest:
+		s := fmt.Sprintf("Start requested on %s — idTag %s, meter %d Wh",
+			connLabel(m.ConnectorId), m.IdTag, m.MeterStart)
+		if when := stamp(m.Timestamp); when != "" {
+			s += " at " + when
+		}
+		return s
+	case *core.StartTransactionConfirmation:
+		return fmt.Sprintf("Transaction %d started (%s)", m.TransactionId, idTagStatus(m.IdTagInfo))
+
+	case *core.StopTransactionRequest:
+		s := fmt.Sprintf("Transaction %d stopped", m.TransactionId)
+		if m.Reason != "" {
+			s += " (" + string(m.Reason) + ")"
+		}
+		s += fmt.Sprintf(" — meter %d Wh", m.MeterStop)
+		if n := len(m.TransactionData); n > 0 {
+			s += fmt.Sprintf(", %d meter sample(s)", n)
+			if hasSignedMeterData(m.TransactionData) {
+				s += " incl. signed OCMF data"
+			}
+		}
+		if when := stamp(m.Timestamp); when != "" {
+			s += " at " + when
+		}
+		return s
+
+	// Telemetry — summarise the newest sample instead of dumping the batch.
+	case *core.MeterValuesRequest:
+		s := "Meter values on " + connLabel(m.ConnectorId)
+		if m.TransactionId != nil {
+			s += fmt.Sprintf(" (tx %d)", *m.TransactionId)
+		}
+		if summary := summarizeSamples(m.MeterValue); summary != "" {
+			s += " — " + summary
+		}
+		if n := len(m.MeterValue); n > 1 {
+			s += fmt.Sprintf(" (+%d earlier sample(s))", n-1)
+		}
+		return s
+
+	// Vendor channel — the FlexPole ships payment receipts through here.
+	case *core.DataTransferRequest:
+		s := "Vendor data from " + m.VendorId
+		if m.MessageId != "" {
+			s += ": " + m.MessageId
+		}
+		if extra := describeVendorData(m.Data); extra != "" {
+			s += " — " + extra
+		}
+		return s
+
+	case *firmware.DiagnosticsStatusNotificationRequest:
+		return "Diagnostics upload: " + string(m.Status)
+	case *firmware.FirmwareStatusNotificationRequest:
+		return "Firmware update: " + string(m.Status)
+	case *securefirmware.SignedFirmwareStatusNotificationRequest:
+		return "Signed firmware update: " + string(m.Status)
+
+	case *security.SecurityEventNotificationRequest:
+		s := "Security event: " + m.Type
+		if when := stamp(m.Timestamp); when != "" {
+			s += " at " + when
+		}
+		if m.TechInfo != "" {
+			s += " — " + m.TechInfo
+		}
+		return s
+	case *security.SignCertificateRequest:
+		return fmt.Sprintf("Certificate signing request (%d-byte CSR)", len(m.CSR))
+	case *logging.LogStatusNotificationRequest:
+		return fmt.Sprintf("Log upload: %s (request %d)", m.Status, m.RequestID)
+	}
+	return msg.GetFeatureName() + " received"
+}
+
+// connLabel names an OCPP connectorId — 0 addresses the station itself.
+func connLabel(id int) string {
+	if id == 0 {
+		return "station"
+	}
+	return fmt.Sprintf("connector %d", id)
+}
+
+// stamp formats an OCPP DateTime; empty when absent so callers can omit it.
+func stamp(t *types.DateTime) string {
+	if t == nil || t.Time.IsZero() {
+		return ""
+	}
+	return t.Time.UTC().Format(time.RFC3339)
+}
+
+// idTagStatus reads an IdTagInfo status defensively.
+func idTagStatus(i *types.IdTagInfo) string {
+	if i == nil {
+		return "(no idTagInfo)"
+	}
+	return string(i.Status)
+}
+
+// hasSignedMeterData reports whether any sample carries a signed (OCMF)
+// reading — the Eichrecht artifact worth flagging on the line.
+func hasSignedMeterData(mvs []types.MeterValue) bool {
+	for _, mv := range mvs {
+		for _, sv := range mv.SampledValue {
+			if sv.Format == types.ValueFormatSignedData {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// summarizeSamples renders the newest MeterValue's measurands compactly
+// ("Power.Offered 150000 W @Outlet, Current.Offered 350 A @Outlet"), capped
+// so a fat batch can't run away with the line. A signed blob is named, never
+// inlined.
+func summarizeSamples(mvs []types.MeterValue) string {
+	if len(mvs) == 0 {
+		return ""
+	}
+	last := mvs[len(mvs)-1]
+	parts := make([]string, 0, len(last.SampledValue))
+	for _, sv := range last.SampledValue {
+		if len(parts) == 6 {
+			parts = append(parts, "…")
+			break
+		}
+		meas := string(sv.Measurand)
+		if meas == "" {
+			meas = "Energy.Active.Import.Register" // the OCPP default when omitted
+		}
+		if sv.Format == types.ValueFormatSignedData {
+			parts = append(parts, meas+" (signed)")
+			continue
+		}
+		p := meas + " " + sv.Value
+		if sv.Unit != "" {
+			p += " " + string(sv.Unit)
+		}
+		if sv.Location != "" {
+			p += " @" + string(sv.Location)
+		}
+		parts = append(parts, p)
+	}
+	return strings.Join(parts, ", ")
+}
+
+// describeVendorData surfaces the money facts when the FlexPole ships a
+// payment receipt as a vendor DataTransfer (messageId TransmitReceiptData).
+// The fee arrives in minor units and the payload names no currency, so both
+// forms are shown and none is invented.
+func describeVendorData(data interface{}) string {
+	raw, ok := data.(string)
+	if !ok {
+		return ""
+	}
+	var r struct {
+		TransactionID int    `json:"transactionId"`
+		ReceiptNr     string `json:"receiptNr"`
+		Fee           int    `json:"fee"`
+	}
+	if json.Unmarshal([]byte(raw), &r) != nil {
+		return ""
+	}
+	var parts []string
+	if r.ReceiptNr != "" {
+		parts = append(parts, "receipt "+r.ReceiptNr)
+	}
+	if r.TransactionID != 0 {
+		parts = append(parts, fmt.Sprintf("tx %d", r.TransactionID))
+	}
+	if r.Fee != 0 {
+		parts = append(parts, fmt.Sprintf("fee %.2f (minor %d)", float64(r.Fee)/100, r.Fee))
+	}
+	return strings.Join(parts, " · ")
 }

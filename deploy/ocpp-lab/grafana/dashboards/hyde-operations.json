@@ -54,6 +54,17 @@
     },
     {
       "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "HYDE · OCPP Messages",
+      "type": "link",
+      "url": "d/ocpp-messages"
+    },
+    {
+      "asDropdown": false,
       "icon": "bolt",
       "includeVars": false,
       "keepTime": false,

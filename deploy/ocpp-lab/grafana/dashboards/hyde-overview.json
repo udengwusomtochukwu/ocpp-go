@@ -51,6 +51,17 @@
       "title": "HYDE · Registry",
       "type": "link",
       "url": "d/ocpp-registry"
+    },
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "HYDE · OCPP Messages",
+      "type": "link",
+      "url": "d/ocpp-messages"
     }
   ],
   "templating": {

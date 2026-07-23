@@ -1345,12 +1345,12 @@
     {
       "id": 30,
       "type": "timeseries",
-      "title": "Grid draw while the buffer refills (est.)",
+      "title": "Grid draw — measured & refill estimate",
       "datasource": {
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "DERIVED ESTIMATE — the charger exposes no grid-side meter over OCPP, so grid intake is inferred from buffer-battery physics: the rise of the internal 218 kWh buffer's state of charge between two consecutive 15-minute reports × 218 kWh ÷ 15 min = the power the grid fed into the buffer. Guards: an interval only counts when both gun sides reported (a single side would skew the pack average), the two reports are strictly adjacent (no gap-spanning), and nothing in the interval belonged to a charging transaction or drew over 0.5 kW — and nothing is interpolated. Reading resolution: buffer SoC reports in ~0.5% steps, so each estimate quantizes to roughly ±4.4 kW, and any estimate above 90 kW — physically implausible for a 63 A feed, e.g. a firmware SoC recalibration jump — is dropped rather than shown. Cross-check: the measured ceiling (~43.6 kW) matches the unit's configured 63 A feed (√3 × 400 V × 63 A = 43.6 kW). Bars appear only for refill intervals; an empty stretch means the buffer was full or a car was charging. This is the effektavgift (demand-charge) story: the site never asks the grid for more than its small feed. Dashed grey line = the 43 kW (63 A) nominal feed.",
+      "description": "DERIVED ESTIMATE — the charger exposes no grid-side meter over OCPP, so grid intake is inferred from buffer-battery physics: the rise of the internal 218 kWh buffer's state of charge between two consecutive 15-minute reports × 218 kWh ÷ 15 min = the power the grid fed into the buffer. Guards: an interval only counts when both gun sides reported (a single side would skew the pack average), the two reports are strictly adjacent (no gap-spanning), and nothing in the interval belonged to a charging transaction or drew over 0.5 kW — and nothing is interpolated. Reading resolution: buffer SoC reports in ~0.5% steps, so each estimate quantizes to roughly ±4.4 kW, and any estimate above 90 kW — physically implausible for a 63 A feed, e.g. a firmware SoC recalibration jump — is dropped rather than shown. Cross-check: the measured ceiling (~43.6 kW) matches the unit's configured 63 A feed (√3 × 400 V × 63 A = 43.6 kW). Bars appear only for refill intervals; an empty stretch means the buffer was full or a car was charging. This is the effektavgift (demand-charge) story: the site never asks the grid for more than its small feed. Dashed grey line = the 43 kW (63 A) nominal feed.\n\nMeasured at the inlet: the charger's VWGC.ChargingStationCurrentImport vendor reading, polled every 60 s. Encoding verified empirically: raw value = 100000 + watts (idle floor ≈ 30–50 W of standby electronics, 0 W during the firmware reboot, peaks 40.1 kW vs the 43.6 kW feed ceiling, sustained refill matching the ΔSoC estimate of 34.9–39.2 kW). Series exists from 2026-07-22 21:41 UTC onward.",
       "gridPos": {
         "h": 8,
         "w": 18,
@@ -1394,7 +1394,35 @@
             ]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Grid draw — measured"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#C7C9CB"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -1417,6 +1445,16 @@
           "format": "time_series",
           "rawQuery": true,
           "rawSql": "WITH body AS (SELECT charge_point, time_bucket('15 minutes', ts) AS b, avg(value) AS soc FROM meter_samples WHERE (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND measurand = 'SoC' AND location = 'Body' AND $__timeFilter(ts) GROUP BY 1, 2 HAVING count(DISTINCT connector_id) >= 2), d AS (SELECT charge_point, b, soc, lag(b) OVER (PARTITION BY charge_point ORDER BY b) AS pb, lag(soc) OVER (PARTITION BY charge_point ORDER BY b) AS psoc FROM body), est AS (SELECT charge_point, b, (soc - psoc) / 100.0 * 218 / (EXTRACT(EPOCH FROM (b - pb)) / 3600.0) AS est_kw FROM d WHERE pb IS NOT NULL AND b - pb = interval '15 minutes' AND soc > psoc AND NOT EXISTS (SELECT 1 FROM meter_samples p WHERE (CASE WHEN '$mode' = 'live' THEN NOT p.is_sim WHEN '$mode' = 'sim' THEN p.is_sim ELSE true END) AND p.charge_point = d.charge_point AND p.ts > d.pb AND p.ts <= d.b AND (p.transaction_id IS NOT NULL OR (p.measurand = 'Power.Active.Import' AND p.value * CASE WHEN p.unit = 'kW' THEN 1 WHEN p.unit = 'MW' THEN 1000 ELSE 0.001 END > 0.5)))) SELECT b AS \"time\", charge_point AS metric, round(est_kw::numeric, 1) AS value FROM est WHERE est_kw <= 90 ORDER BY b"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time_bucket('1 minute', ts) AS \"time\", 'Grid draw — measured' AS metric, round((avg(GREATEST(value - 100000, 0)) / 1000.0)::numeric, 2) AS value FROM meter_samples WHERE connector_id = 0 AND measurand = 'VWGC.ChargingStationCurrentImport' AND (CASE WHEN '$mode' = 'live' THEN NOT is_sim WHEN '$mode' = 'sim' THEN is_sim ELSE true END) AND $__timeFilter(ts) GROUP BY 1 ORDER BY 1"
         }
       ]
     },

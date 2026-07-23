@@ -239,7 +239,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Chargers holding a live websocket to the backend right now. Guarded by the scrape state: if the backend is unreachable this shows 'backend unreachable' rather than a stale count.",
+      "description": "Chargers holding a live websocket to the backend right now. Guarded by the scrape state: if the backend is unreachable this shows 'backend unreachable' rather than a stale count.\n\nThis is a right-now stat: it always evaluates over the last 5 minutes regardless of the dashboard time range (a frozen historical range otherwise blanks it).",
       "gridPos": {
         "h": 6,
         "w": 4,
@@ -294,7 +294,8 @@
           "expr": "(sum(ocpp_chargers_connected{mode=~\"$mode\"}) or vector(0)) and on() (up{job=\"ocpp-central-system\"} == 1)",
           "legendFormat": "online"
         }
-      ]
+      ],
+      "timeFrom": "5m"
     },
     {
       "id": 912,

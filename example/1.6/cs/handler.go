@@ -392,11 +392,21 @@ func logDefault(chargePointId string, feature string) *logrus.Entry {
 // featureNamer is satisfied by every ocpp-go request and confirmation type.
 type featureNamer interface{ GetFeatureName() string }
 
-// maxPayloadBytes caps the `payload` field. A StopTransaction can carry
-// hundreds of transactionData samples (~100 KB); the summary line already
-// names what matters and the raw samples live in Timescale, so an oversized
-// blob is clipped rather than shipped to Loki whole.
-const maxPayloadBytes = 32 * 1024
+// maxPayloadBytes caps the `payload` field, and the ceiling is Loki's, not a
+// guess: `payload` is structured metadata, so it is governed by
+// max_structured_metadata_size = 64 KB (NOT max_line_size = 256 KB), and this
+// Loki runs max_line_size_truncate = false — meaning an over-limit entry is
+// REJECTED WHOLE, not trimmed. Shipping an uncapped payload would therefore
+// lose the entire StopTransaction message exactly when a session was long
+// enough to be interesting.
+//
+// Measured on the real FlexPole: a 34-minute session's transactionData is
+// ~35 KB (~130 entries) and the longest session on record (42 min) lands
+// ~45 KB. 48 KB fits both with headroom under the 64 KB reject — the other
+// structured fields (client, message, mode, dir, trace_id) share that budget.
+// Beyond it the line still tells the whole story and the raw samples remain in
+// Timescale (HYDE · Sessions), which is their system of record per ADR-0003.
+const maxPayloadBytes = 48 * 1024
 
 // logFrame records one OCPP message. The log LINE is a human-readable
 // diagnostic sentence — what happened, on which connector, with which code —

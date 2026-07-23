@@ -1028,7 +1028,7 @@
         "type": "loki",
         "uid": "loki"
       },
-      "description": "Backend log lines at warn/error severity plus charger status lines mentioning a fault — the place to find vendor error details (open a line for its full metadata, including the reporting charger). The recurring harmless 'upgrade failed' probe noise (health checks and scanners hitting the websocket port) is filtered out here; the unfiltered stream lives on the OCPP Registry dashboard.\n\nMode filter: charger-attributed log lines follow the Live/Simulation switch; infrastructure lines (no charger id) always show.",
+      "description": "Backend log lines at warn/error severity ONLY, i.e. genuine alerts. A charger status reporting errorCode=NoError is not an error and no longer appears here: until 2026-07-23 a second query also matched the letters 'error' anywhere in the line, which swept in every normal StatusNotification because its payload reads \"errorCode\":\"NoError\" — that query is removed, severity is now the only rule. The full message transcript lives on HYDE · OCPP Messages — the place to find vendor error details (open a line for its full metadata, including the reporting charger). The recurring harmless 'upgrade failed' probe noise (health checks and scanners hitting the websocket port) is filtered out here; the unfiltered stream lives on the OCPP Registry dashboard.\n\nMode filter: charger-attributed log lines follow the Live/Simulation switch; infrastructure lines (no charger id) always show.",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -1055,16 +1055,6 @@
           "expr": "{service_name=\"ocpp-central-system\"} | detected_level =~ `warn|error` != `upgrade failed` | mode=~`$mode` or mode=``",
           "queryType": "range",
           "maxLines": 200
-        },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "expr": "{service_name=\"ocpp-central-system\"} | message = `StatusNotification` |~ `(?i)(fault|error)` | mode=~`$mode` or mode=``",
-          "queryType": "range",
-          "maxLines": 100
         }
       ]
     },

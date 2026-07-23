@@ -191,7 +191,7 @@
     {
       "id": 17,
       "type": "barchart",
-      "title": "Sessions per day",
+      "title": "Sessions per day · ${__from:date:MMM D HH:mm} → ${__to:date:MMM D HH:mm}",
       "description": "Distinct (charge point, tx) pairs with samples on each calendar day (Europe/Stockholm), across the fleet. Rendered as category bars: the previous version bucketed to UTC midnight on a time axis, so with a short range the bucket timestamp fell outside the visible window and the panel claimed 'No sessions in range' despite data. Caveats: a tx reporting across midnight counts on each day it touches, and sim tx ids merge across CS restarts. Exact times of day are on the charge timeline below.",
       "gridPos": {
         "h": 7,
@@ -258,7 +258,7 @@
     {
       "id": 18,
       "type": "stat",
-      "title": "Cars charged",
+      "title": "Cars charged · ${__from:date:MMM D HH:mm} → ${__to:date:MMM D HH:mm}",
       "description": "Distinct (charge point, tx) pairs with samples in the dashboard range — i.e. metered charging sessions, our best proxy for cars served. Lab caveat: tx ids come from the CS and its counter resets on restart, so sim sessions reusing an id merge into one.",
       "gridPos": {
         "h": 7,
@@ -316,7 +316,7 @@
     {
       "id": 20,
       "type": "state-timeline",
-      "title": "Charges — time of day",
+      "title": "Charges — time of day · ${__from:date:MMM D HH:mm} → ${__to:date:MMM D HH:mm}",
       "description": "Every transaction across the fleet at its actual wall-clock time — one lane per charge point, block value = tx id, from per-minute buckets of meter_samples. Complements 'Sessions per day', which only shows dates. Gaps longer than 6 minutes break a block. Lab caveat: reused tx ids merge across CS restarts.",
       "gridPos": {
         "h": 7,
@@ -378,7 +378,7 @@
     {
       "id": 19,
       "type": "table",
-      "title": "Sessions",
+      "title": "Sessions — latest 25",
       "description": "Latest 25 transactions fleet-wide, ordered by newest last-sample — never by tx id, which is not chronological (the CS transaction counter resets on redeploy). status is LIVE while the newest sample is under 3 minutes old; on a LIVE row, last sample / duration / kWh / SoC are running values, not finals. duration = first meter sample to last. kWh is the import-register span (falls back to the export register for the sim, which sends export only); avg kW is the mean of in-tx power samples; last SoC is the car's last non-zero report. Ignores the dashboard time range so the session picker always has context. Lab caveat: sim tx ids reset per CS restart, so a reused id merges into one long row. '× grid feed' is a DERIVED ESTIMATE: the session's peak kW ÷ the 43 kW (63 A) nominal grid connection — how many times faster the buffer let the car charge than the feed alone would allow; blank when the session logged no power.",
       "gridPos": {
         "h": 9,

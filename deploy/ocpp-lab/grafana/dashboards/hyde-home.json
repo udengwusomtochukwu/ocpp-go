@@ -1,0 +1,450 @@
+{
+  "uid": "hyde-home",
+  "title": "HYDE · Home",
+  "tags": [],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "timezone": "browser",
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 900,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "<div style=\"height:100%;display:flex;align-items:flex-end;justify-content:space-between;padding:2px 4px 12px 4px;border-bottom:1px solid rgba(255,255,255,0.14);\"><div><div style=\"font-size:26px;line-height:1;letter-spacing:0.16em;color:#FFFFFF;font-weight:800;font-family:Inter,sans-serif;\">HYDE&nbsp;<span style=\"font-weight:300;color:#9E9E9E;\">HOME</span></div><div style=\"margin-top:7px;font-size:11px;letter-spacing:0.08em;color:#8A8A8A;\">Battery-buffered fast charging — pick a dashboard below</div></div><span style=\"font-size:10px;letter-spacing:0.22em;color:#3DDC5F;border:1px solid rgba(61,220,95,0.55);border-radius:999px;padding:4px 12px;margin-bottom:2px;white-space:nowrap;\">LIVE DATA</span></div>"
+      }
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Chargers online",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "How many chargers hold a live connection to the charging backend at this moment. Orange zero = no charger can start a session. If the backend itself cannot be reached, this shows 'backend unreachable' instead of a stale number.\n\nThis is a right-now stat: it always evaluates over the last 5 minutes regardless of the dashboard time range (a frozen historical range otherwise blanks it).\n\nTruth states: a number = chargers connected (in the selected mode); 'backend unreachable' = the metrics scrape is actively failing; 'no metrics in this time range' = the selected window predates the collected metrics history (e.g. a frozen absolute range) — pick a relative range like Last 24 hours.",
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 0,
+        "y": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "no metrics in this time range",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#F5A623",
+                "value": null
+              },
+              {
+                "color": "#3DDC5F",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "backend unreachable",
+                  "color": "#F5A623",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(sum(ocpp_chargers_connected{mode=\"live\"}) or vector(0)) and on() (up{job=\"ocpp-central-system\"} == 1) or (vector(-1) and on() (up{job=\"ocpp-central-system\"} == 0))",
+          "legendFormat": "online"
+        }
+      ],
+      "timeFrom": "5m"
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Power flowing now",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Total power being delivered to cars right now — the sum of each gun’s newest power reading from the last 3 minutes. 0 kW simply means no car is drawing power at the moment.",
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 4,
+        "y": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(round(sum(kw_last)::numeric, 1), 0) AS \"kW now\" FROM (SELECT charge_point, connector_id, last(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END, ts) AS kw_last FROM meter_samples WHERE NOT is_sim AND measurand = 'Power.Active.Import' AND ts > now() - interval '3 minutes' GROUP BY 1, 2) g WHERE kw_last > 0.5"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Sessions today",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Charging sessions started since midnight local time (Central European, CEST) across all chargers — regardless of the time range picked above. Test-rig sessions count too.",
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 8,
+        "y": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#FFFFFF"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE NOT is_sim AND transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT count(*)::int AS \"sessions today\" FROM sessions WHERE start_ts >= date_trunc('day', now() AT TIME ZONE 'Europe/Stockholm') AT TIME ZONE 'Europe/Stockholm'"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Energy today",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Energy delivered by sessions started since midnight local time (CEST), from the chargers’ own energy meters. A session still running contributes what it has delivered so far.",
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 12,
+        "y": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#FFFFFF"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE NOT is_sim AND transaction_id IS NOT NULL), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), seg2 AS (SELECT *, max(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id, seg_no) AS seg_end FROM seg), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, min(ts) AS start_ts, max(ts) AS end_ts, EXTRACT(EPOCH FROM (max(ts) - min(ts))) AS dur_s, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh, max(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS peak_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import') AS avg_kw, avg(value * CASE WHEN unit = 'kW' THEN 1 WHEN unit = 'MW' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Power.Active.Import' AND ts >= seg_end - interval '2 minutes') AS tail_kw, count(*) FILTER (WHERE measurand = 'Power.Active.Import') AS n_power, max(ts) > now() - interval '3 minutes' AS is_live FROM seg2 GROUP BY 1, 2, 3, 4) SELECT COALESCE(round(sum(kwh)::numeric, 1), 0) AS \"kwh today\" FROM sessions WHERE start_ts >= date_trunc('day', now() AT TIME ZONE 'Europe/Stockholm') AT TIME ZONE 'Europe/Stockholm'"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "stat",
+      "title": "Peak grid draw (30 d, measured)",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "Measured at the inlet: the charger's VWGC.ChargingStationCurrentImport vendor reading, polled every 60 s. Encoding verified empirically: raw value = 100000 + watts (idle floor ≈ 30–50 W of standby electronics, 0 W during the firmware reboot, peaks 40.1 kW vs the 43.6 kW feed ceiling, sustained refill matching the ΔSoC estimate of 34.9–39.2 kW). Series exists from 2026-07-22 21:41 UTC onward. This is the demand-charge (effektavgift) KPI as the meter saw it; the ΔSoC-derived estimate remains on HYDE · Operations for comparison.",
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 16,
+        "y": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "noValue": "No refill intervals yet",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#FFFFFF"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true,
+        "showPercentChange": false,
+        "percentChangeColorMode": "standard"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT round((max(GREATEST(value - 100000, 0)) / 1000.0)::numeric, 1) AS \"peak grid draw\" FROM meter_samples WHERE connector_id = 0 AND measurand = 'VWGC.ChargingStationCurrentImport' AND NOT is_sim AND ts > now() - interval '30 days'"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "bargauge",
+      "title": "Buffer battery now",
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "description": "The charger’s internal battery (one share per gun side) that tops up fast charging beyond what the grid feed alone could deliver. High = full boost capacity available; it dips while boosting a car and slowly refills from the grid afterwards. Latest reading — the charger reports it roughly every 15 minutes, even when idle.",
+      "gridPos": {
+        "h": 6,
+        "w": 4,
+        "x": 20,
+        "y": 3
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "noValue": "No buffer battery reporting",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#E5484D",
+                "value": null
+              },
+              {
+                "color": "#F5A623",
+                "value": 20
+              },
+              {
+                "color": "#3DDC5F",
+                "value": 50
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "namePlacement": "auto",
+        "minVizWidth": 0,
+        "minVizHeight": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "timescale"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT CASE connector_id WHEN 1 THEN 'Gun A side' WHEN 2 THEN 'Gun B side' ELSE 'Connector ' || connector_id END AS \"side\", round(last(value, ts))::int AS \"charge\" FROM meter_samples WHERE NOT is_sim AND measurand = 'SoC' AND location = 'Body' GROUP BY connector_id ORDER BY connector_id"
+        }
+      ]
+    },
+    {
+      "id": 50,
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### Dashboards\n\n**[HYDE · Overview](/grafana/d/hyde-overview)** — the stakeholder view: today, the last 30 days, and the grid advantage\n\n**[HYDE · Operations](/grafana/d/hyde-operations)** — service health, faults, commands, tariff, firmware & connector wear\n\n**[HYDE · Sessions](/grafana/d/ocpp-sessions)** — every charging session in engineering detail\n\n**[HYDE · Registry](/grafana/d/ocpp-registry)** — OCPP protocol counters, raw telemetry, logs & traces\n\n**[HYDE · OCPP Messages](/grafana/d/ocpp-messages)** — the charger's OCPP conversation, human-readable and filterable\n\n*Times shown in your browser's timezone. All dashboards default to LIVE hardware data; use each dashboard's `mode` picker to view simulator/test data.*"
+      }
+    },
+    {
+      "id": 51,
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### Housekeeping\n\n- **Live hardware:** A2111LHE0212606001 (dual-gun battery-buffered FlexPole). Everything else is classified as simulation and hidden by default.\n- **Data coverage:** session & meter history since Jul 14 · ops metrics keep a durable 7-day window (since Jul 23) · grid draw is **measured at the inlet** every minute since Jul 22, alongside the buffer-physics estimate.\n- **Firmware:** ZD-SW4.2.4.1 installed over-the-air Jul 23. The update reset the vendor's plug-cycle wear counters (previously 91 / 54).\n- **Faults** survive restarts (durable fault log) and surface on Operations → Faults & errors with vendor detail.\n- **Windows are stated:** panels say which time window they cover in their title or header tag; “no metrics in this time range” means the selected window predates collected history — pick a relative range like *Last 24 hours*.\n- **Charge-point ids stay off metrics** (cardinality rule); they live on traces, logs and the session store."
+      }
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "links": [],
+  "annotations": {
+    "list": []
+  },
+  "description": "HYDE landing page: live summary, dashboard directory and housekeeping notes. Served as the Grafana home dashboard."
+}

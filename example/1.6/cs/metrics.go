@@ -215,7 +215,17 @@ func recordEvent(ev Event) {
 			mPower.Record(ctx, 0, metric.WithAttributes(mode))
 		}
 	case "status":
-		if code, _ := ev.Data["errorCode"].(string); code != "" && code != "NoError" {
+		code, _ := ev.Data["errorCode"].(string)
+		if code == "" || code == "NoError" {
+			// A Faulted status without an errorCode is still a fault — count it
+			// under the literal status so it can't slip past the fault panels.
+			if status, _ := ev.Data["status"].(string); status == "Faulted" {
+				code = "Faulted"
+			} else {
+				code = ""
+			}
+		}
+		if code != "" {
 			mFaults.Add(ctx, 1, metric.WithAttributes(attribute.String("error_code", code), mode))
 		}
 	case "command.result":

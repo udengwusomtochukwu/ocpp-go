@@ -176,11 +176,13 @@ func (handler *CentralSystemHandler) OnStatusNotification(chargePointId string, 
 			st.status = request.Status
 		}
 		detail := fmt.Sprintf("connector %d · %s", request.ConnectorId, request.Status)
-		if request.ErrorCode != core.NoError {
+		if request.ErrorCode != core.NoError && request.ErrorCode != "" {
 			detail += " · " + string(request.ErrorCode)
-			// Fault log: OCPP errorCode enum + free-form vendor fields — the
-			// skeleton of a vendor fault timeline (vendorErrorCode carries the
-			// OEM code, e.g. "0119F1").
+		}
+		// Fault log: OCPP errorCode enum + free-form vendor fields — the
+		// skeleton of a vendor fault timeline (vendorErrorCode carries the
+		// OEM code, e.g. "0119F1").
+		if faultCode, ok := faultClass(request); ok {
 			info := request.Info
 			if request.VendorErrorCode != "" {
 				info = strings.TrimSpace(info + " [vendor " + request.VendorErrorCode + "]")
@@ -189,7 +191,7 @@ func (handler *CentralSystemHandler) OnStatusNotification(chargePointId string, 
 			if request.Status == core.ChargePointStatusFaulted {
 				severity = "critical"
 			}
-			st.pushFault(string(request.ErrorCode), info, severity)
+			st.pushFault(faultCode, info, severity)
 		}
 		st.pushTrace("in", request.GetFeatureName(), detail)
 	})
@@ -203,17 +205,17 @@ func (handler *CentralSystemHandler) OnStatusNotification(chargePointId string, 
 	// the errorCode — so without this, Loki (the durable log) had no record of
 	// a fault at all. Warn/error level also makes the operations dashboard's
 	// errors panel pick it up.
-	if request.ErrorCode != core.NoError {
+	if faultCode, ok := faultClass(request); ok {
 		detail := request.Info
 		if request.VendorErrorCode != "" {
 			detail = strings.TrimSpace(detail + " [vendor " + request.VendorErrorCode + "]")
 		}
 		entry := logDefault(chargePointId, request.GetFeatureName()).WithFields(logrus.Fields{
-			"error_code":        string(request.ErrorCode),
+			"error_code":        faultCode,
 			"vendor_error_code": request.VendorErrorCode,
 			"connector":         request.ConnectorId,
 		})
-		line := fmt.Sprintf("charger fault: connector %d · %s · %s · %s", request.ConnectorId, request.Status, request.ErrorCode, detail)
+		line := fmt.Sprintf("charger fault: connector %d · %s · %s · %s", request.ConnectorId, request.Status, faultCode, detail)
 		if request.Status == core.ChargePointStatusFaulted {
 			entry.Error(line)
 		} else {
@@ -333,6 +335,20 @@ func (handler *CentralSystemHandler) OnLogStatusNotification(chargingStationID s
 }
 
 // Utility functions
+
+// faultClass reports whether a StatusNotification represents a fault, and the
+// code to file it under: the OCPP errorCode when one is present, else the
+// literal status "Faulted" — real chargers (the FlexPole mid-OTA included)
+// report status=Faulted with errorCode=NoError, which must not slip through.
+func faultClass(request *core.StatusNotificationRequest) (string, bool) {
+	if request.ErrorCode != core.NoError && request.ErrorCode != "" {
+		return string(request.ErrorCode), true
+	}
+	if request.Status == core.ChargePointStatusFaulted {
+		return string(core.ChargePointStatusFaulted), true
+	}
+	return "", false
+}
 
 func logDefault(chargePointId string, feature string) *logrus.Entry {
 	// mode rides along as a logrus field -> OTLP attribute -> Loki structured

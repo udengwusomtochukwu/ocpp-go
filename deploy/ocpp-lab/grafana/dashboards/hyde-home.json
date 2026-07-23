@@ -742,13 +742,13 @@
             "type": "postgres",
             "uid": "timescale"
           },
-          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE NOT is_sim AND transaction_id IS NOT NULL AND ts > now() - interval '30 days'), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh FROM seg GROUP BY 1, 2, 3, 4) SELECT round((COALESCE(sum(kwh), 0) * 4.99)::numeric, 0) AS \"SEK\" FROM sessions",
+          "rawSql": "WITH samp AS (SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value, CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts) > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg FROM meter_samples WHERE NOT is_sim AND transaction_id IS NOT NULL AND ts > now() - interval '30 days'), seg AS (SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no FROM samp), sessions AS (SELECT charge_point, connector_id, transaction_id, seg_no, COALESCE(max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand = 'Energy.Active.Import.Register'), max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register') - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END) FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')) AS kwh FROM seg GROUP BY 1, 2, 3, 4) SELECT to_char(round((COALESCE(sum(kwh), 0) * 4.99)::numeric, 0), 'FM999 999 999') || ' kr' AS \"revenue\" FROM sessions",
           "format": "table"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "currencySEK",
+          "unit": "none",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",

@@ -85,9 +85,14 @@ services:
     container_name: ocpp-lab-prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
-      - --storage.tsdb.retention.time=6h
+      # 7d comfortably covers the Operations dashboard's 24h default (and any
+      # week view); at a 5s scrape of this small series set it stays tiny.
+      - --storage.tsdb.retention.time=7d
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # Metrics history survives container recreates/redeploys (it previously
+      # died with the container — the TSDB lived in the writable layer).
+      - prometheus-data:/prometheus
     networks:
       - sim
 
@@ -159,3 +164,5 @@ networks:
 volumes:
   # Raw meter samples survive redeploys (Dokploy recreates containers, not volumes).
   timescale-data:
+  # Prometheus TSDB — 7d of ops metrics survive redeploys the same way.
+  prometheus-data:

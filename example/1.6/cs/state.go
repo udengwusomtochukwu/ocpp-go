@@ -239,6 +239,17 @@ func project(id string, st *ChargePointState) restCharger {
 	if sessions > 0 {
 		avg = energyWh / 1000 / float64(sessions)
 	}
+	sessions30d, energy30dKwh, avg30dKwh := sessions, roundTo(energyWh/1000, 2), roundTo(avg, 2)
+	// The in-memory numbers above only cover the current CS process ("since
+	// boot"). With the meter store enabled they are replaced by a true 30-day
+	// projection from meter_samples that survives restarts (see tsdb.go).
+	if ts, ok := tsdbStats(id); ok {
+		sessions30d, energy30dKwh = ts.sessions, roundTo(ts.kwh, 2)
+		avg30dKwh = 0
+		if ts.sessions > 0 {
+			avg30dKwh = roundTo(ts.kwh/float64(ts.sessions), 2)
+		}
+	}
 
 	trace := make([]restTraceEntry, len(st.trace))
 	// dashboard renders newest-first; our ring is oldest-first
@@ -277,8 +288,8 @@ func project(id string, st *ChargePointState) restCharger {
 		Faults:        faults,
 		Tickets:       []any{},
 		Stats: restStats{
-			Sessions30d: sessions, Energy30dKwh: roundTo(energyWh/1000, 2),
-			AvgSessionKwh: roundTo(avg, 2), Faults30d: len(faults),
+			Sessions30d: sessions30d, Energy30dKwh: energy30dKwh,
+			AvgSessionKwh: avg30dKwh, Faults30d: len(faults),
 		},
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -188,6 +189,7 @@ func tsdbWriter(pool *pgxpool.Pool) {
 	}
 	tsdbBackfillMode(pool)
 	tsdbApplyPolicies(pool)
+	go tsdbStatsRefresher(pool)
 	log.Info("tsdb: timescale meter-sample writer started")
 	batch := make([]meterSample, 0, tsdbBatchMax)
 	ticker := time.NewTicker(tsdbFlushEvery)
@@ -250,6 +252,98 @@ func tsdbEnsureSchema(pool *pgxpool.Pool) error {
 		}
 	}
 	return nil
+}
+
+// --- REST stats projection ---
+// The registry's "30 d" stats used to come from the in-memory transaction map,
+// which every CS restart wipes — so "sessions30d" really meant "since boot".
+// When the store is enabled they are projected from meter_samples instead:
+// a background refresher aggregates a true 30-day window with the same
+// gap-split sessionization the dashboards use, and project() reads the cache.
+
+type cpStats struct {
+	sessions int
+	kwh      float64
+}
+
+const tsdbStatsRefresh = 60 * time.Second
+
+var (
+	tsdbStatsMu  sync.RWMutex
+	tsdbStatsMap map[string]cpStats // nil until the first successful refresh
+)
+
+// tsdbStats returns the projected 30d stats for a charge point. ok=false means
+// the projection is unavailable (store disabled or not yet refreshed) and the
+// caller should fall back to in-memory numbers. A charge point missing from a
+// live projection genuinely had no sessions in 30 days — zeros, honestly.
+func tsdbStats(chargePointID string) (cpStats, bool) {
+	tsdbStatsMu.RLock()
+	defer tsdbStatsMu.RUnlock()
+	if tsdbStatsMap == nil {
+		return cpStats{}, false
+	}
+	return tsdbStatsMap[chargePointID], true
+}
+
+func tsdbStatsRefresher(pool *pgxpool.Pool) {
+	for {
+		if m, err := tsdbFetchStats(pool); err != nil {
+			log.Warnf("tsdb: stats refresh failed: %v", err)
+		} else {
+			tsdbStatsMu.Lock()
+			tsdbStatsMap = m
+			tsdbStatsMu.Unlock()
+		}
+		time.Sleep(tsdbStatsRefresh)
+	}
+}
+
+func tsdbFetchStats(pool *pgxpool.Pool) (map[string]cpStats, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	rows, err := pool.Query(ctx, `
+		WITH samp AS (
+			SELECT charge_point, connector_id, transaction_id, ts, measurand, unit, value,
+			       CASE WHEN ts - lag(ts) OVER (PARTITION BY charge_point, connector_id, transaction_id ORDER BY ts)
+			                 > interval '15 minutes' THEN 1 ELSE 0 END AS new_seg
+			FROM meter_samples
+			WHERE transaction_id IS NOT NULL AND ts > now() - interval '30 days'
+		), seg AS (
+			SELECT *, sum(new_seg) OVER (PARTITION BY charge_point, connector_id, transaction_id
+			                             ORDER BY ts ROWS UNBOUNDED PRECEDING) AS seg_no
+			FROM samp
+		), sessions AS (
+			SELECT charge_point, connector_id, transaction_id, seg_no,
+			       COALESCE(
+			           max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END)
+			               FILTER (WHERE measurand = 'Energy.Active.Import.Register')
+			         - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END)
+			               FILTER (WHERE measurand = 'Energy.Active.Import.Register'),
+			           max(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END)
+			               FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')
+			         - min(value * CASE WHEN unit = 'kWh' THEN 1 WHEN unit = 'MWh' THEN 1000 ELSE 0.001 END)
+			               FILTER (WHERE measurand LIKE 'Energy.Active.%.Register')
+			       ) AS kwh
+			FROM seg
+			GROUP BY 1, 2, 3, 4
+		)
+		SELECT charge_point, count(*)::int, COALESCE(sum(kwh), 0)::float8
+		FROM sessions GROUP BY 1`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	m := map[string]cpStats{}
+	for rows.Next() {
+		var cp string
+		var s cpStats
+		if err := rows.Scan(&cp, &s.sessions, &s.kwh); err != nil {
+			return nil, err
+		}
+		m[cp] = s
+	}
+	return m, rows.Err()
 }
 
 // tsdbFlush inserts one batch; on error the batch is dropped (lab-grade —

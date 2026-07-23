@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -106,16 +107,41 @@ func recordCommercial(chargePointID string, kv map[string]string) map[string]any
 	return out
 }
 
+// chargerInfoSeen remembers each charge point's last-recorded identity: an
+// OTel gauge keeps exporting every label set ever recorded, so after a
+// firmware update the old identity series would sit at 1 next to the new one
+// and the dashboard would show two versions. On change the old series is
+// zeroed; the Firmware panel filters == 1.
+var (
+	chargerInfoMu   sync.Mutex
+	chargerInfoSeen = map[string][3]string{} // charge point id -> vendor, model, firmware
+)
+
 // recordChargerInfo publishes the charger's boot identity as an info metric.
 func recordChargerInfo(chargePointID, vendor, model, fw string) {
 	if mChargerInfo == nil {
 		return
 	}
-	mChargerInfo.Record(context.Background(), 1, metric.WithAttributes(
+	ctx := context.Background()
+	mode := modeAttr(chargePointID)
+	cur := [3]string{vendor, model, fw}
+	chargerInfoMu.Lock()
+	prev, had := chargerInfoSeen[chargePointID]
+	chargerInfoSeen[chargePointID] = cur
+	chargerInfoMu.Unlock()
+	if had && prev != cur {
+		mChargerInfo.Record(ctx, 0, metric.WithAttributes(
+			attribute.String("vendor", prev[0]),
+			attribute.String("model", prev[1]),
+			attribute.String("firmware", prev[2]),
+			mode,
+		))
+	}
+	mChargerInfo.Record(ctx, 1, metric.WithAttributes(
 		attribute.String("vendor", vendor),
 		attribute.String("model", model),
 		attribute.String("firmware", fw),
-		modeAttr(chargePointID),
+		mode,
 	))
 }
 

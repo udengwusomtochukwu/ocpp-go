@@ -350,7 +350,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "ocpp_charger_info{mode=~\"$mode\"}",
+          "expr": "ocpp_charger_info{mode=~\"$mode\"} == 1",
           "legendFormat": "{{firmware}}",
           "instant": true
         }

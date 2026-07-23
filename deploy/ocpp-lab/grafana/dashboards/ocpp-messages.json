@@ -117,6 +117,37 @@
         ],
         "includeAll": false,
         "multi": false
+      },
+      {
+        "name": "dir",
+        "type": "custom",
+        "label": "Direction",
+        "description": "Received = messages the charger sent to us (BootNotification, MeterValues, StatusNotification, …). Sent = our responses back to the charger (interval, accepted status, transaction id).",
+        "query": "Both : .+, Received : in, Sent : out",
+        "current": {
+          "selected": true,
+          "text": "Both",
+          "value": ".+"
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "Both",
+            "value": ".+"
+          },
+          {
+            "selected": false,
+            "text": "Received",
+            "value": "in"
+          },
+          {
+            "selected": false,
+            "text": "Sent",
+            "value": "out"
+          }
+        ],
+        "includeAll": false,
+        "multi": false
       }
     ]
   },
@@ -174,13 +205,13 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "<div style=\"font-family:Manrope,system-ui,sans-serif;padding:6px 2px\"><span style=\"font-weight:800;letter-spacing:.02em\">HYDE</span><span style=\"font-weight:300;color:#9E9E9E\"> · OCPP Messages</span><div style=\"color:#8A8A8A;font-size:12px;margin-top:2px\">Live OCPP conversation from the charger — human-readable, filter by Message type. The vendor diagnostics equivalent.</div></div>"
+        "content": "<div style=\"font-family:Manrope,system-ui,sans-serif;padding:6px 2px\"><span style=\"font-weight:800;letter-spacing:.02em\">HYDE</span><span style=\"font-weight:300;color:#9E9E9E\"> · OCPP Messages</span><div style=\"color:#8A8A8A;font-size:12px;margin-top:2px\">The live OCPP conversation with the charger — every message's full payload, exactly as sent. Filter by Message type, Direction and mode. The vendor diagnostics equivalent, parsed and queryable.</div></div>"
       }
     },
     {
       "id": 10,
       "type": "logs",
-      "title": "OCPP message log",
+      "title": "OCPP message log — full payload",
       "datasource": {
         "type": "loki",
         "uid": "loki"
@@ -194,6 +225,7 @@
       "options": {
         "showTime": true,
         "wrapLogMessage": true,
+        "prettifyLogMessage": true,
         "enableLogDetails": true,
         "sortOrder": "Descending",
         "dedupStrategy": "none"
@@ -205,10 +237,10 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{service_name=\"ocpp-central-system\"} | message =~ `$action` | mode=~`$mode` or mode=``"
+          "expr": "{service_name=\"ocpp-central-system\"} | message =~ `$action` | mode=~`$mode` or mode=`` | dir =~ `$dir`"
         }
       ],
-      "description": "Every OCPP message the charger sends/receives, filtered by the Message dropdown (like the vendor's log UI). Click a line to expand fields (client, message, mode, trace)."
+      "description": "The complete OCPP payload of every message, exactly as the charger sent it (BootNotification identity — vendor/model/serial/firmware/iccid/imsi/meterType/meterSerialNumber — meter values, status, transactions) plus our responses. The vendor's zdenergy log UI equivalent, but parsed and queryable: filter by Message type, Direction (Received/Sent) and mode. Toggle 'Prettify JSON' off for the raw one-line frame; click any line to expand the client / message / mode / dir / payload fields."
     },
     {
       "id": 11,

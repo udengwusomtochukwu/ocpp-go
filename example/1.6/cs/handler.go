@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -91,16 +92,20 @@ type CentralSystemHandler struct {
 // ------------- Core profile callbacks -------------
 
 func (handler *CentralSystemHandler) OnAuthorize(chargePointId string, request *core.AuthorizeRequest) (confirmation *core.AuthorizeConfirmation, err error) {
+	logFrame(chargePointId, "in", request)
 	ctx, span := startCPSpan(chargePointId, request.GetFeatureName())
 	defer span.End()
 	handler.update(chargePointId, func(st *ChargePointState) {
 		st.pushTrace("in", request.GetFeatureName(), "idTag "+request.IdTag)
 	})
 	logDefault(chargePointId, request.GetFeatureName()).WithContext(ctx).Infof("client authorized")
-	return core.NewAuthorizationConfirmation(types.NewIdTagInfo(types.AuthorizationStatusAccepted)), nil
+	resp := core.NewAuthorizationConfirmation(types.NewIdTagInfo(types.AuthorizationStatusAccepted))
+	logFrame(chargePointId, "out", resp)
+	return resp, nil
 }
 
 func (handler *CentralSystemHandler) OnBootNotification(chargePointId string, request *core.BootNotificationRequest) (confirmation *core.BootNotificationConfirmation, err error) {
+	logFrame(chargePointId, "in", request)
 	ctx, span := startCPSpan(chargePointId, request.GetFeatureName())
 	defer span.End()
 	handler.update(chargePointId, func(st *ChargePointState) {
@@ -120,15 +125,19 @@ func (handler *CentralSystemHandler) OnBootNotification(chargePointId string, re
 	}})
 	recordChargerInfo(chargePointId, request.ChargePointVendor, request.ChargePointModel, request.FirmwareVersion)
 	logDefault(chargePointId, request.GetFeatureName()).WithContext(ctx).Infof("boot confirmed")
-	return core.NewBootNotificationConfirmation(types.NewDateTime(time.Now()), heartbeatInterval, core.RegistrationStatusAccepted), nil
+	resp := core.NewBootNotificationConfirmation(types.NewDateTime(time.Now()), heartbeatInterval, core.RegistrationStatusAccepted)
+	logFrame(chargePointId, "out", resp)
+	return resp, nil
 }
 
 func (handler *CentralSystemHandler) OnDataTransfer(chargePointId string, request *core.DataTransferRequest) (confirmation *core.DataTransferConfirmation, err error) {
+	logFrame(chargePointId, "in", request)
 	logDefault(chargePointId, request.GetFeatureName()).Infof("received data %v", request.Data)
 	return core.NewDataTransferConfirmation(core.DataTransferStatusAccepted), nil
 }
 
 func (handler *CentralSystemHandler) OnHeartbeat(chargePointId string, request *core.HeartbeatRequest) (confirmation *core.HeartbeatConfirmation, err error) {
+	logFrame(chargePointId, "in", request)
 	handler.update(chargePointId, nil) // liveness stamp
 	bus.Publish(Event{Type: "heartbeat", Charger: chargePointId})
 	logDefault(chargePointId, request.GetFeatureName()).Infof("heartbeat handled")
@@ -136,6 +145,7 @@ func (handler *CentralSystemHandler) OnHeartbeat(chargePointId string, request *
 }
 
 func (handler *CentralSystemHandler) OnMeterValues(chargePointId string, request *core.MeterValuesRequest) (confirmation *core.MeterValuesConfirmation, err error) {
+	logFrame(chargePointId, "in", request)
 	// Surface the most recent sample on the trace + event stream.
 	sampleVal, sampleUnit := "", ""
 	if n := len(request.MeterValue); n > 0 {
@@ -176,6 +186,7 @@ func (handler *CentralSystemHandler) OnMeterValues(chargePointId string, request
 }
 
 func (handler *CentralSystemHandler) OnStatusNotification(chargePointId string, request *core.StatusNotificationRequest) (confirmation *core.StatusNotificationConfirmation, err error) {
+	logFrame(chargePointId, "in", request)
 	handler.update(chargePointId, func(st *ChargePointState) {
 		st.errorCode = request.ErrorCode
 		if request.ConnectorId > 0 {
@@ -239,6 +250,7 @@ func (handler *CentralSystemHandler) OnStatusNotification(chargePointId string, 
 }
 
 func (handler *CentralSystemHandler) OnStartTransaction(chargePointId string, request *core.StartTransactionRequest) (confirmation *core.StartTransactionConfirmation, err error) {
+	logFrame(chargePointId, "in", request)
 	_, span := startCPSpan(chargePointId, request.GetFeatureName())
 	defer span.End()
 	handler.mu.Lock()
@@ -267,10 +279,13 @@ func (handler *CentralSystemHandler) OnStartTransaction(chargePointId string, re
 	}})
 	// TODO: check billable clients
 	logDefault(chargePointId, request.GetFeatureName()).Infof("started transaction %v for connector %v", transaction.id, transaction.connectorId)
-	return core.NewStartTransactionConfirmation(types.NewIdTagInfo(types.AuthorizationStatusAccepted), transaction.id), nil
+	resp := core.NewStartTransactionConfirmation(types.NewIdTagInfo(types.AuthorizationStatusAccepted), transaction.id)
+	logFrame(chargePointId, "out", resp)
+	return resp, nil
 }
 
 func (handler *CentralSystemHandler) OnStopTransaction(chargePointId string, request *core.StopTransactionRequest) (confirmation *core.StopTransactionConfirmation, err error) {
+	logFrame(chargePointId, "in", request)
 	_, span := startCPSpan(chargePointId, request.GetFeatureName())
 	defer span.End()
 	handler.mu.Lock()
@@ -303,6 +318,7 @@ func (handler *CentralSystemHandler) OnStopTransaction(chargePointId string, req
 // ------------- Firmware management profile callbacks -------------
 
 func (handler *CentralSystemHandler) OnDiagnosticsStatusNotification(chargePointId string, request *firmware.DiagnosticsStatusNotificationRequest) (confirmation *firmware.DiagnosticsStatusNotificationConfirmation, err error) {
+	logFrame(chargePointId, "in", request)
 	handler.update(chargePointId, func(st *ChargePointState) {
 		st.diagnosticsStatus = request.Status
 		st.pushTrace("in", request.GetFeatureName(), string(request.Status))
@@ -312,6 +328,7 @@ func (handler *CentralSystemHandler) OnDiagnosticsStatusNotification(chargePoint
 }
 
 func (handler *CentralSystemHandler) OnFirmwareStatusNotification(chargePointId string, request *firmware.FirmwareStatusNotificationRequest) (confirmation *firmware.FirmwareStatusNotificationConfirmation, err error) {
+	logFrame(chargePointId, "in", request)
 	handler.update(chargePointId, func(st *ChargePointState) {
 		st.firmwareStatus = request.Status
 		st.pushTrace("in", request.GetFeatureName(), string(request.Status))
@@ -323,21 +340,25 @@ func (handler *CentralSystemHandler) OnFirmwareStatusNotification(chargePointId 
 // No callbacks for Local Auth management, Reservation, Remote trigger or Smart Charging profile on central system
 
 func (handler *CentralSystemHandler) OnSecurityEventNotification(chargingStationID string, request *security.SecurityEventNotificationRequest) (response *security.SecurityEventNotificationResponse, err error) {
+	logFrame(chargingStationID, "in", request)
 	logDefault(chargingStationID, request.GetFeatureName()).Infof("security event notification received")
 	return security.NewSecurityEventNotificationResponse(), nil
 }
 
 func (handler *CentralSystemHandler) OnSignCertificate(chargingStationID string, request *security.SignCertificateRequest) (response *security.SignCertificateResponse, err error) {
+	logFrame(chargingStationID, "in", request)
 	logDefault(chargingStationID, request.GetFeatureName()).Infof("certificate signing request received")
 	return security.NewSignCertificateResponse(types.GenericStatusAccepted), nil
 }
 
 func (handler *CentralSystemHandler) OnSignedFirmwareStatusNotification(chargingStationID string, request *securefirmware.SignedFirmwareStatusNotificationRequest) (response *securefirmware.SignedFirmwareStatusNotificationResponse, err error) {
+	logFrame(chargingStationID, "in", request)
 	logDefault(chargingStationID, request.GetFeatureName()).Infof("signed firmware status notification received")
 	return securefirmware.NewFirmwareStatusNotificationResponse(), nil
 }
 
 func (handler *CentralSystemHandler) OnLogStatusNotification(chargingStationID string, request *logging.LogStatusNotificationRequest) (response *logging.LogStatusNotificationResponse, err error) {
+	logFrame(chargingStationID, "in", request)
 	logDefault(chargingStationID, request.GetFeatureName()).Infof("log status notification received")
 	return logging.NewLogStatusNotificationResponse(), nil
 }
@@ -362,4 +383,26 @@ func logDefault(chargePointId string, feature string) *logrus.Entry {
 	// mode rides along as a logrus field -> OTLP attribute -> Loki structured
 	// metadata, so log panels can follow the same live/sim switch as metrics.
 	return log.WithFields(logrus.Fields{"client": chargePointId, "message": feature, "mode": modeOf(chargePointId)})
+}
+
+// featureNamer is satisfied by every ocpp-go request and confirmation type.
+type featureNamer interface{ GetFeatureName() string }
+
+// logFrame records a complete OCPP message payload to the log pipeline
+// (logrus -> OTLP -> Loki -> Grafana). The vendor's diagnostics UI (zdenergy
+// /#/log) prints the raw CALL/CALLRESULT frame; this gives the same content but
+// parsed and queryable — `message` is the action, `dir` is in/out, `mode`
+// follows the live/sim switch, and the marshalled body rides as the `payload`
+// structured field (also the log line, so it's readable without expanding).
+// Handlers keep their own human-readable Infof lines; this is the
+// machine-complete record the "OCPP Messages" dashboard renders.
+func logFrame(chargePointId, dir string, msg featureNamer) {
+	payload, err := json.Marshal(msg)
+	if err != nil {
+		payload = []byte(fmt.Sprintf("%+v", msg))
+	}
+	logDefault(chargePointId, msg.GetFeatureName()).
+		WithField("dir", dir).
+		WithField("payload", string(payload)).
+		Info(string(payload))
 }

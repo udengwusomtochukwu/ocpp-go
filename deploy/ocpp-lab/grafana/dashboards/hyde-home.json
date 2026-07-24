@@ -599,7 +599,7 @@
         "type": "postgres",
         "uid": "timescale"
       },
-      "description": "Measured at the inlet: the charger's VWGC.ChargingStationCurrentImport vendor reading, polled every 60 s. Encoding verified empirically: raw value = 100000 + watts (idle floor ≈ 30–50 W of standby electronics, 0 W during the firmware reboot, peaks 40.1 kW vs the 43.6 kW feed ceiling, sustained refill matching the ΔSoC estimate of 34.9–39.2 kW). Series exists from 2026-07-22 21:41 UTC onward. This is the demand-charge (effektavgift) KPI as the meter saw it; the ΔSoC-derived estimate remains on HYDE · Operations for comparison.",
+      "description": "Measured at the inlet: the charger's VWGC.ChargingStationCurrentImport vendor reading, polled every 60 s. Encoding CONFIRMED by ZD (2026-07-23): raw value = 100000 + watts, read from the AC meter — i.e. true grid-side AC power. (Cross-checks: idle floor ≈ 30–50 W standby, 0 W during the firmware reboot, peak 40.1 kW vs the 43.6 kW feed ceiling.) Series exists from 2026-07-22 21:41 UTC onward. This is the demand-charge (effektavgift) KPI as the meter saw it; the ΔSoC-derived estimate remains on HYDE · Operations for comparison.",
       "gridPos": {
         "h": 6,
         "w": 4,

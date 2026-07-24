@@ -43,8 +43,7 @@ var ledNames = map[int]string{
 var ledPriority = []int{ledFault, ledUnavailable, ledCharging, ledBufferCharge, ledStarting, ledAvailable, ledOffline}
 
 // gridImportW holds the latest decoded grid-import watts per charge point,
-// fed by the config poller (raw = 100000 + W; empirically verified encoding,
-// vendor confirmation pending).
+// fed by the config poller (raw = 100000 + W from the AC meter; ZD-confirmed).
 var (
 	gridImportMu sync.Mutex
 	gridImportW  = map[string]float64{}

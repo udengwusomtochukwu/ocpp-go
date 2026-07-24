@@ -13,15 +13,17 @@ var errTimeout = errors.New("timeout waiting for configuration")
 // hyde/lab: grid-side visibility via vendor config keys. The FlexPole exposes
 // its live grid import and the import target as OCPP configuration keys —
 // polling them gives MEASURED grid-side data (the demand-charge/leverage KPI
-// input) instead of the SoC-derived estimate. Values are stored raw (vendor
-// scale undocumented; observed ~100036 against a 63 A target — likely mA).
+// input) instead of the SoC-derived estimate. Import is stored raw: ZD
+// confirmed (2026-07-23) the encoding is 100000 + watts read from the AC
+// meter — i.e. true grid-side AC power. Decoded to watts at read time
+// (led.go) and in the dashboards (GREATEST(value-100000,0)); kept raw in the
+// column so the whole history decodes with one rule.
 const (
 	gridImportKey  = "VWGC.ChargingStationCurrentImport"
 	gridTargetKey  = "VWGC.ChargingStationCurrentImportTarget"
 	gridPollPeriod = 60 * time.Second
 
-	// Commercial + hardware-wear keys — unambiguous units (unlike the grid
-	// import, whose vendor scale is unconfirmed and therefore stored raw).
+	// Commercial + hardware-wear keys, all with confirmed units.
 	priceKey      = "PosCtrlr.PricePerKwh"
 	currencyKey   = "PosCtrlr.Currency"
 	preauthKey    = "PosCtrlr.PreAuthorizationAmount"
@@ -60,8 +62,8 @@ func pollGrid(h *CentralSystemHandler) {
 		for _, k := range keys {
 			kv[k.Key] = k.Value
 		}
-		// Grid import/target -> Timescale (raw vendor units) + SSE. Scale is
-		// unconfirmed, so we never convert it to amps/watts here.
+		// Grid import/target -> Timescale (raw: 100000 + AC-meter watts, ZD-
+		// confirmed) + SSE. Kept raw here; decoded at read time.
 		grid := map[string]any{}
 		for _, gk := range []string{gridImportKey, gridTargetKey} {
 			v, perr := strconv.ParseFloat(kv[gk], 64)

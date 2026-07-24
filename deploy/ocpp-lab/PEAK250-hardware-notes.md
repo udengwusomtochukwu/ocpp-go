@@ -8,6 +8,12 @@ are those documents unless marked **measured**.
 
 ## Power & grid feed (Initial Setup, spec sheets)
 
+- **`VWGC.ChargingStationCurrentImport` = 100000 + watts, read from the AC
+  meter** — CONFIRMED by ZD email 2026-07-23 (was empirically decoded, now
+  official). This is true grid-side AC power, i.e. the exact quantity a demand
+  charge (effektavgift) bills on. The `Target` key is amps (63 = our feed).
+  Stored raw in `meter_samples` (connector 0, `location=Inlet`); decoded to
+  watts at read time everywhere.
 - Two independent DC charging points (Gun A/B = OCPP connector 1/2), **one
   CCS Type 2 Combo connector each** → 2 OCPI EVSEs × 1 connector.
 - **Dynamic current distribution (DPD)** — output scales with the mains feed:
@@ -82,8 +88,8 @@ firmware.
 
 ## Still unanswered (ask ZD)
 
-- `VWGC.ChargingStationCurrentImport` encoding (empirically 100000 + watts) —
-  not documented in either PDF.
+- ✅ **RESOLVED 2026-07-23:** `VWGC.ChargingStationCurrentImport` = 100000 +
+  watts from the AC meter (see Power & grid feed above).
 - Whether reported Body SoC is usable-window-normalized (calibration says
   yes; get it confirmed).
 - Why the 4.2.4.1 OTA reset `VWGC.ChargeGunPlugCycleCounters` (91,54 → 0,0).

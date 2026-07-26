@@ -243,7 +243,11 @@ func main() {
 		onConnect(id) // hyde/lab: registry metrics (mode-labelled)
 		bus.Publish(Event{Type: "charger.connected", Charger: id})
 		log.WithFields(logrus.Fields{"client": id, "mode": modeOf(id)}).Info("new charge point connected")
-		go exampleRoutine(id, handler)
+		// Only against simulators — never fire the upstream demo sequence
+		// (ReserveNow/ChangeConfiguration/…) at real hardware on connect.
+		if !isLive(id) {
+			go exampleRoutine(id, handler)
+		}
 		// Populate the config cache shortly after boot settles.
 		go func() {
 			time.Sleep(4 * time.Second)
@@ -288,6 +292,8 @@ func main() {
 	startREST(handler)
 	// hyde/lab: measured grid-side intake via vendor config keys -> Timescale
 	startGridPoller(handler)
+	// hyde/lab: preventive idle-aware scheduled reset (SCHEDULED_RESET_AT).
+	startScheduledReset(handler)
 	// hyde/lab: raw MeterValues -> TimescaleDB when TSDB_DSN is set (ADR-0003
 	// preview: product-data plane, separate from the Prometheus ops metrics)
 	startTimescale(handler)

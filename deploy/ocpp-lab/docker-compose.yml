@@ -30,6 +30,9 @@ services:
       - PUBLIC_WS_URL=wss://ocpp-lab.hydecharge.com  # advertised charger endpoint
       - TSDB_DSN=postgres://ocpplab:ocpplab@timescale:5432/ocpplab?sslmode=disable  # raw meter samples -> Timescale
       - LIVE_CHARGER_IDS=A2111LHE0212606001  # allowlist: real hardware; every other id is classified sim
+      - SCHEDULED_RESET_AT=04:00        # daily idle-aware reset (UTC = 06:00 CEST); empty disables
+      - SCHEDULED_RESET_TYPE=Soft       # Soft | Hard
+      - SCHEDULED_RESET_GRACE_MIN=30    # wait this long for an idle window before skipping
     depends_on:
       timescale:
         condition: service_started

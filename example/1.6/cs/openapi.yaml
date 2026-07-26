@@ -276,6 +276,23 @@ paths:
                 type: { type: string, enum: [Soft, Hard], default: Soft }
       responses:
         "200": { description: Confirmation, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
+  /chargers/{id}/commands/reset-when-idle:
+    post:
+      tags: [commands]
+      summary: Reset only if idle (no active transaction) — never interrupts a customer
+      description: "Busy → 409, not reset. The same idle-safety the daily scheduled reset uses."
+      security: [{ internalToken: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type: { type: string, enum: [Soft, Hard], default: Soft }
+      responses:
+        "200": { description: Confirmation, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
+        "409": { description: Charger busy — active transaction, not reset }
   /chargers/{id}/commands/change-availability:
     post:
       tags: [commands]

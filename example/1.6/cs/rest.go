@@ -301,6 +301,26 @@ func handleCommand(w http.ResponseWriter, r *http.Request, h *CentralSystemHandl
 			}
 			done <- confirmOutcome(s, map[string]any{"type": kind}, err, c == nil)
 		}, core.ResetType(kind))
+	case "reset-when-idle":
+		// Reset only if no transaction is active — never interrupts a customer.
+		// Busy → 409 (not reset). Same idle-safety the scheduled reset uses.
+		feature = core.ResetFeatureName
+		kind := str("type", "Soft")
+		if kind != "Soft" && kind != "Hard" {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "type must be Soft or Hard"})
+			return
+		}
+		if tx, busy := h.activeTransaction(chargerID); busy {
+			writeJSON(w, http.StatusConflict, map[string]any{"error": "charger busy — active transaction, not reset", "transactionId": tx})
+			return
+		}
+		sendErr = centralSystem.Reset(chargerID, func(c *core.ResetConfirmation, err error) {
+			s := ""
+			if c != nil {
+				s = string(c.Status)
+			}
+			done <- confirmOutcome(s, map[string]any{"type": kind, "idle": true}, err, c == nil)
+		}, core.ResetType(kind))
 	case "change-availability":
 		// Take a charge point (or one connector) in/out of service. The lever
 		// for fencing off faulty hardware remotely — e.g. a unit throwing a
@@ -414,7 +434,7 @@ func handleCommand(w http.ResponseWriter, r *http.Request, h *CentralSystemHandl
 		writeJSON(w, http.StatusNotFound, map[string]any{"error": "unknown command", "commands": []string{
 			"remote-start", "remote-stop", "trigger", "reset", "unlock-connector", "get-configuration",
 			"change-configuration", "set-charging-profile", "clear-charging-profile", "get-composite-schedule",
-			"update-firmware", "change-availability",
+			"update-firmware", "change-availability", "reset-when-idle",
 		}})
 		return
 	}

@@ -276,6 +276,24 @@ paths:
                 type: { type: string, enum: [Soft, Hard], default: Soft }
       responses:
         "200": { description: Confirmation, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
+  /chargers/{id}/commands/change-availability:
+    post:
+      tags: [commands]
+      summary: ChangeAvailability — take a charge point (or connector) in/out of service
+      description: "connectorId 0 (default) targets the whole charge point. Use Inoperative to fence off faulty hardware; Operative to restore."
+      security: [{ internalToken: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type: { type: string, enum: [Operative, Inoperative] }
+                connectorId: { type: integer, default: 0, description: "0 = whole charge point" }
+      responses:
+        "200": { description: Confirmation, content: { application/json: { schema: { $ref: "#/components/schemas/CommandResult" } } } }
   /chargers/{id}/commands/get-configuration:
     post:
       tags: [commands]

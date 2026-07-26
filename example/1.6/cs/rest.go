@@ -301,6 +301,30 @@ func handleCommand(w http.ResponseWriter, r *http.Request, h *CentralSystemHandl
 			}
 			done <- confirmOutcome(s, map[string]any{"type": kind}, err, c == nil)
 		}, core.ResetType(kind))
+	case "change-availability":
+		// Take a charge point (or one connector) in/out of service. The lever
+		// for fencing off faulty hardware remotely — e.g. a unit throwing a
+		// recurring HCU precharge fault that keeps aborting customer sessions.
+		// connectorId 0 (default) = the whole charge point.
+		feature = core.ChangeAvailabilityFeatureName
+		var avail core.AvailabilityType
+		switch str("type", "") {
+		case "Operative":
+			avail = core.AvailabilityTypeOperative
+		case "Inoperative":
+			avail = core.AvailabilityTypeInoperative
+		default:
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "type must be Operative or Inoperative"})
+			return
+		}
+		connector := num("connectorId", 0)
+		sendErr = centralSystem.ChangeAvailability(chargerID, func(c *core.ChangeAvailabilityConfirmation, err error) {
+			s := ""
+			if c != nil {
+				s = string(c.Status)
+			}
+			done <- confirmOutcome(s, map[string]any{"connectorId": connector, "type": string(avail)}, err, c == nil)
+		}, connector, avail)
 	case "get-configuration":
 		var keys []string
 		if raw, ok := body["keys"].([]any); ok {
@@ -389,7 +413,8 @@ func handleCommand(w http.ResponseWriter, r *http.Request, h *CentralSystemHandl
 	default:
 		writeJSON(w, http.StatusNotFound, map[string]any{"error": "unknown command", "commands": []string{
 			"remote-start", "remote-stop", "trigger", "reset", "unlock-connector", "get-configuration",
-			"change-configuration", "set-charging-profile", "clear-charging-profile", "get-composite-schedule", "update-firmware",
+			"change-configuration", "set-charging-profile", "clear-charging-profile", "get-composite-schedule",
+			"update-firmware", "change-availability",
 		}})
 		return
 	}

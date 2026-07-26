@@ -1,0 +1,187 @@
+<!doctype html>
+<html data-theme="light" lang="en">
+<head>
+<meta charset="utf-8">
+<title>Incident Report — PEAK250 Precharge Module Fault (2026-07-26)</title>
+<style>
+  :root {
+    --bg: #f6f8f8; --bg-2: #eef2f2; --panel: #ffffff; --line: #dbe3e3; --line-2: #c8d3d3;
+    --fg: #17211f; --fg-hi: #0a1210; --fg-muted: #566461; --fg-faint: #849491;
+    --accent: #0d9488; --accent-hi: #0b7d72; --accent-wash: #0d94881a;
+    --allow: #15803d; --allow-wash: #16a34a1a; --deny: #be123c; --deny-wash: #e11d481a;
+    --locked: #b45309; --locked-wash: #d977061a;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f8f8; --bg-2: #eef2f2; --panel: #ffffff; --line: #dbe3e3; --line-2: #c8d3d3;
+    --fg: #17211f; --fg-hi: #0a1210; --fg-muted: #566461; --fg-faint: #849491;
+    --accent: #0d9488; --accent-hi: #0b7d72; --accent-wash: #0d94881a;
+    --allow: #15803d; --allow-wash: #16a34a1a; --deny: #be123c; --deny-wash: #e11d481a;
+    --locked: #b45309; --locked-wash: #d977061a;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: var(--sans); font-size: 15px; line-height: 1.62;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 0 24px 72px; }
+  header.masthead { border-bottom: 1px solid var(--line); padding: 40px 0 30px; margin-bottom: 36px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--accent-hi); margin: 0 0 14px; display: flex; align-items: center; gap: 9px;
+  }
+  .eyebrow::before { content: ""; width: 22px; height: 2px; background: var(--accent); display: inline-block; }
+  h1 { font-size: clamp(28px, 4.2vw, 40px); line-height: 1.06; letter-spacing: -.021em; font-weight: 680; color: var(--fg-hi); margin: 0 0 16px; text-wrap: balance; }
+  .lede { font-size: 16.5px; color: var(--fg-muted); max-width: 70ch; margin: 0; }
+  .lede b { color: var(--fg); font-weight: 600; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+  .tag { font-family: var(--mono); font-size: 11.5px; color: var(--fg-muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 11px; background: var(--panel); }
+  .tag b { color: var(--accent-hi); font-weight: 600; }
+  .tag.crit b { color: var(--deny); }
+  section { margin-top: 44px; }
+  .sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; }
+  .sec-num { font-family: var(--mono); font-size: 12px; color: var(--accent); border: 1px solid var(--accent-wash); background: var(--accent-wash); border-radius: 6px; padding: 1px 7px; flex: none; }
+  h2 { font-size: 21px; letter-spacing: -.012em; font-weight: 650; color: var(--fg-hi); margin: 0; }
+  .sec-sub { color: var(--fg-muted); font-size: 14.5px; margin: 0 0 18px; max-width: 72ch; }
+  p { max-width: 74ch; }
+  code { font-family: var(--mono); font-size: .875em; background: var(--bg-2); border: 1px solid var(--line); border-radius: 5px; padding: .08em .38em; color: var(--fg-hi); }
+  ul { max-width: 74ch; padding-left: 20px; } li { margin: 5px 0; color: var(--fg-muted); } li b { color: var(--fg); }
+  .layers { display: grid; gap: 12px; }
+  .layer { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .layer .badge { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .04em; padding: 4px 9px; border-radius: 7px; height: fit-content; white-space: nowrap; }
+  .badge.deny { color: var(--deny); background: var(--deny-wash); border: 1px solid var(--deny-wash); }
+  .badge.ok { color: var(--allow); background: var(--allow-wash); border: 1px solid var(--allow-wash); }
+  .badge.warn { color: var(--locked); background: var(--locked-wash); border: 1px solid var(--locked-wash); }
+  .layer h4 { margin: 1px 0 4px; font-size: 15px; color: var(--fg-hi); font-weight: 620; }
+  .layer p { margin: 0; font-size: 13.5px; color: var(--fg-muted); max-width: none; }
+  .pipe-note { margin-top: 16px; font-size: 13.5px; color: var(--fg-muted); border-left: 2px solid var(--locked); padding: 8px 0 8px 14px; background: var(--locked-wash); border-radius: 0 6px 6px 0; }
+  .pipe-note.deny { border-left-color: var(--deny); background: var(--deny-wash); }
+  .pipe-note b { color: var(--fg-hi); }
+  .tbl-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; margin: 4px 0; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 13px; }
+  thead th { text-align: left; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--fg-faint); font-weight: 600; padding: 11px 14px; background: var(--bg-2); border-bottom: 1px solid var(--line); font-family: var(--mono); }
+  tbody td { padding: 11px 14px; border-bottom: 1px solid var(--line); color: var(--fg-muted); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody td:first-child { color: var(--fg-hi); font-weight: 600; font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+  .mono { font-family: var(--mono); }
+  .tok-bad { color: var(--deny); font-weight: 600; }
+  .tok-ok { color: var(--allow); font-weight: 600; }
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 12px; color: var(--fg-faint); display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  footer .mono { font-family: var(--mono); }
+  @page { margin: 14mm 12mm; }
+  section, .layer, .tbl-scroll { break-inside: avoid; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">hydecharge-ocpi · ocpp lab · incident report</p>
+    <h1>PEAK250 recurring precharge-module fault</h1>
+    <p class="lede">A station-level hardware fault — <b>HCU Precharge Module Fault_0x27</b> (vendor code <b>012900</b>) — aborted <b>three consecutive customer charging sessions</b> within 41 minutes on 2026-07-26, each while power was already flowing. Service was restored by a remote hard reset, but the fault is a <b>degrading hardware condition</b> that recurs on charging and requires vendor inspection.</p>
+    <div class="meta-row">
+      <span class="tag">unit <b>A2111LHE0212606001</b></span>
+      <span class="tag">firmware <b>ZD-SW4.2.4.1</b></span>
+      <span class="tag">vendor <b>ZD Energy</b></span>
+      <span class="tag crit">severity <b>Critical</b></span>
+      <span class="tag mono">2026-07-26</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">01</span><h2>Summary</h2></div>
+    <p class="sec-sub">Times are shown in UTC with site-local CEST (UTC+2) in parentheses; the charger reports in UTC.</p>
+    <ul>
+      <li>The dual-gun battery-buffered PEAK250 raised the identical fault <b>three times</b> — 09:14:47, 09:27:27 and 09:55:08 UTC (11:14, 11:27, 11:55 CEST).</li>
+      <li>Each occurrence was a <b>station-level</b> fault (OCPP connector 0) that forced <b>both</b> guns to <code>Faulted</code> and aborted the active Gun&nbsp;1 (CCS) session.</li>
+      <li>All three happened <b>during charging</b> at 52–75&nbsp;kW, not at plug-in, and under normal operating conditions (no overload).</li>
+      <li>The time-to-fault shortened on each attempt — <b>2&nbsp;min&nbsp;40&nbsp;s → 40&nbsp;s → 30&nbsp;s</b> — the signature of a degrading component.</li>
+      <li>A separate, isolated <code>SECC sequence error</code> (vendor 163200) occurred earlier at 06:06 UTC on Gun&nbsp;2 and did not recur.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">02</span><h2>Incident timeline</h2></div>
+    <p class="sec-sub">Reconstructed from the central-system durable fault log, the TimescaleDB meter store, and Loki. Each fault immediately followed an aborted charging session on Gun&nbsp;1.</p>
+    <div class="tbl-scroll">
+    <table>
+      <thead><tr><th>Time (UTC / CEST)</th><th>Session</th><th>Charging before fault</th><th>Fault</th><th>Outcome</th></tr></thead>
+      <tbody>
+        <tr><td>09:14:47<br>11:14:47</td><td>tx 1021, Gun 1</td><td>2 min 40 s · peak 75 kW · EV SoC 38→42%</td><td class="tok-bad">HCU Prechrg Module Fault_0x27<br>vendor 012900</td><td>Both guns → Faulted; session stopped (reason "Other"); ~11 min recovery</td></tr>
+        <tr><td>09:27:27<br>11:27:27</td><td>tx 1022, Gun 1</td><td>~40 s · peak 80 kW · same EV (SoC 42%)</td><td class="tok-bad">HCU Prechrg Module Fault_0x27<br>vendor 012900</td><td>Both guns → Faulted; session stopped (reason "Other")</td></tr>
+        <tr><td>09:55:08<br>11:55:08</td><td>tx 1023, Gun 1</td><td>~30 s · peak 52 kW</td><td class="tok-bad">HCU Prechrg Module Fault_0x27<br>vendor 012900</td><td>Both guns → Faulted; new customer session aborted</td></tr>
+        <tr><td>06:06:45<br>08:06:45</td><td>— (Gun 2 idle)</td><td>n/a</td><td class="tok-bad">SECC detect the sequence error<br>vendor 163200</td><td>Isolated; did not recur; Gun 1 charged normally 3 min later</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="pipe-note">For contrast, earlier sessions the same morning completed normally: tx&nbsp;1019 (Gun&nbsp;1, 08:09 CEST, 147&nbsp;kW peak, ~35&nbsp;min) and tx&nbsp;1020 (Gun&nbsp;2, 10:53&nbsp;CEST). The fault is intermittent, not a hard failure of the whole unit.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">03</span><h2>Root-cause analysis</h2></div>
+    <p class="sec-sub">Four independent observations point to a defective, degrading component on the shared DC power stage.</p>
+    <div class="layers">
+      <div class="layer"><span class="badge deny">SHARED</span><div><h4>It downs both guns → shared component</h4><p>The fault is reported on OCPP connector 0 (the station itself) and forces <em>both</em> charging points to <code>Faulted</code>. In the battery-buffered architecture both guns draw from one shared DC/power stage — consistent with the precharge module sitting on that shared bus rather than on a single gun.</p></div></div>
+      <div class="layer"><span class="badge warn">MID-SESSION</span><div><h4>It fires during charging, not at plug-in</h4><p>Precharge normally runs once at session start to match the DC link to the EV battery before closing the main contactor. Here it faulted 2.5&nbsp;minutes into a session with 62&nbsp;kW already flowing — an unusual timing that suggests either continuous precharge-circuit monitoring detecting a fault, or a mid-session precharge re-run (e.g. on buffer↔grid source switching).</p></div></div>
+      <div class="layer"><span class="badge warn">NORMAL LOAD</span><div><h4>It occurs under normal conditions</h4><p>At fault time the car drew 62–75&nbsp;kW, buffer SoC was 94–100%, and grid infeed was ~40&nbsp;kW — well within rating. Nothing was overloaded, which argues for a hardware defect rather than an operating-condition trip.</p></div></div>
+      <div class="layer"><span class="badge deny">DEGRADING</span><div><h4>Onset accelerates on each attempt</h4><p>Time-to-fault fell from 2&nbsp;min&nbsp;40&nbsp;s to 40&nbsp;s to 30&nbsp;s across the three attempts. A component that fails progressively sooner is the classic signature of thermal or wear-driven degradation, not a one-off transient.</p></div></div>
+    </div>
+    <p class="pipe-note deny"><b>Working hypothesis:</b> a failing precharge module (contactor / resistor / DC-link monitoring) on the shared DC stage, degrading under repeated load. The precise meaning of internal sub-code <code>0x27</code> and vendor code <code>012900</code> requires ZD's confirmation.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">04</span><h2>Customer impact</h2></div>
+    <p class="sec-sub">Three charging attempts were aborted mid-session. Signed OCMF meter data exists for each, so billing is defensible.</p>
+    <ul>
+      <li><b>tx 1021</b> — 2.37 kWh delivered before abort; receipt #00000368.</li>
+      <li><b>tx 1022</b> — 0.20 kWh delivered (same driver retried); receipt #00000370.</li>
+      <li><b>tx 1023</b> — a new customer, ~30 s of charging before abort.</li>
+    </ul>
+    <p class="pipe-note">Each session ended with OCPP StopTransaction reason <code>Other</code> (fault-terminated), not <code>Local</code> (customer-ended). Affected drivers should be refunded to the actual energy delivered, and the pre-authorization holds released.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">05</span><h2>Response &amp; remediation</h2></div>
+    <div class="layers">
+      <div class="layer"><span class="badge ok">DONE</span><div><h4>Remote hard reset — service restored</h4><p>A hard reset was issued from our backend at 09:59:43 UTC and accepted by the charger. It power-cycled and returned with both guns <code>Available</code> and no fault state at 10:04 UTC — ~5 minutes total. A soft reset was deliberately avoided, as it would restart only the application and not clear a latched hardware fault.</p></div></div>
+      <div class="layer"><span class="badge ok">DONE</span><div><h4>Remote take-out-of-service capability added</h4><p>The incident exposed that we had no way to remotely fence off faulty hardware. We wired the OCPP <code>ChangeAvailability</code> operation into the backend command surface (<code>POST /chargers/{id}/commands/change-availability</code>, Operative / Inoperative), so a faulting unit can now be marked Inoperative remotely pending inspection.</p></div></div>
+      <div class="layer"><span class="badge deny">ACTION</span><div><h4>Recommended: take the unit out of service</h4><p>The reset clears the fault state but not the cause; the fault recurs on charging. Until ZD inspects, the unit (or at minimum Gun&nbsp;1) should be set Inoperative so arriving customers see "unavailable" rather than a failed charge and a pre-auth hold.</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">06</span><h2>For the vendor (ZD Energy)</h2></div>
+    <p class="sec-sub">Fault codes observed on unit A2111LHE0212606001, firmware ZD-SW4.2.4.1.</p>
+    <div class="tbl-scroll">
+    <table>
+      <thead><tr><th>Vendor code</th><th>Text</th><th>OCPP errorCode</th><th>Occurrences</th></tr></thead>
+      <tbody>
+        <tr><td>012900</td><td>HCU Prechrg Module Fault_0x27</td><td>OtherError</td><td>3× (09:14, 09:27, 09:55 UTC), all mid-session on Gun 1</td></tr>
+        <tr><td>163200</td><td>SECC detect the sequence error</td><td>OtherError</td><td>1× (06:06 UTC), Gun 2, isolated</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="margin-top:18px"><b>Questions for ZD:</b></p>
+    <ul>
+      <li>What does <b>012900 / HCU Prechrg Module Fault_0x27</b> indicate specifically — which component (precharge contactor, resistor, DC-link monitoring)?</li>
+      <li>Why would a <em>precharge</em> fault trigger minutes into an active session, long after precharge completes? Is precharge re-run mid-session (e.g. on buffer↔grid source switching) in the buffered design?</li>
+      <li>Why does the fault take <b>both</b> charging points down — is the precharge module shared across the two DC outputs?</li>
+      <li>Does the accelerating onset (2 m 40 s → 40 s → 30 s) indicate a degrading / thermal condition versus a hard failure? Is the unit safe to keep in service?</li>
+      <li>Recommended action — inspection or part replacement?</li>
+      <li>Separately: is <b>163200 (SECC sequence error)</b> on Gun 2 related, or an independent vehicle-handshake issue?</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span class="mono">hydecharge-ocpi · ocpp lab</span>
+    <span>Incident: PEAK250 precharge module fault</span>
+    <span class="mono">unit A2111LHE0212606001</span>
+    <span class="mono">generated 2026-07-26</span>
+    <span>Sources: central-system durable fault log · TimescaleDB meter store · Loki</span>
+  </footer>
+</div>
+</body>
+</html>

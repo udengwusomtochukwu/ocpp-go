@@ -19,7 +19,7 @@ import (
 const (
 	envGrafanaSilenceURL = "GRAFANA_SILENCE_URL" // .../api/alertmanager/grafana/api/v2/silences
 	envGrafanaAuth       = "GRAFANA_AUTH"        // "user:password" for basic auth
-	ackSilenceHours      = 4
+	ackSilenceMins       = 10                    // short pause: re-nag soon if still unresolved
 )
 
 func handleAck(w http.ResponseWriter, r *http.Request) {
@@ -38,9 +38,9 @@ func handleAck(w http.ResponseWriter, r *http.Request) {
 		writeAckPage(w, "Noted, but the reminders could not be paused automatically. Please let the team know you're on it.", false)
 		return
 	}
-	log.Infof("ack: %q acknowledged by %s (silence %s, %dh)", alertname, by, sid, ackSilenceHours)
+	log.Infof("ack: %q acknowledged by %s (silence %s, %dm)", alertname, by, sid, ackSilenceMins)
 	postAckToTeams(alertname, by)
-	writeAckPage(w, fmt.Sprintf("Acknowledged. Reminders for this alert are paused for %d hours. Thank you, %s.", ackSilenceHours, by), true)
+	writeAckPage(w, fmt.Sprintf("Acknowledged. Reminders for this alert are paused for %d minutes. Thank you, %s.", ackSilenceMins, by), true)
 }
 
 func createSilence(alertname, by string) (string, error) {
@@ -53,7 +53,7 @@ func createSilence(alertname, by string) (string, error) {
 	payload := map[string]any{
 		"matchers":  []map[string]any{{"name": "alertname", "value": alertname, "isRegex": false, "isEqual": true}},
 		"startsAt":  now.Format("2006-01-02T15:04:05.000Z"),
-		"endsAt":    now.Add(ackSilenceHours * time.Hour).Format("2006-01-02T15:04:05.000Z"),
+		"endsAt":    now.Add(ackSilenceMins * time.Minute).Format("2006-01-02T15:04:05.000Z"),
 		"createdBy": "teams-ack:" + by,
 		"comment":   "Acknowledged via Teams by " + by,
 	}
@@ -81,7 +81,7 @@ func createSilence(alertname, by string) (string, error) {
 // postAckToTeams posts a short confirmation back to the channel and the chat so
 // everyone can see the alert was reacted to. Best-effort, non-blocking.
 func postAckToTeams(alertname, by string) {
-	text := fmt.Sprintf("✅ **Acknowledged** by %s — reminders paused for %dh.\n\n_%s_", by, ackSilenceHours, alertname)
+	text := fmt.Sprintf("✅ **Acknowledged** by %s — reminders paused for %d min.\n\n_%s_", by, ackSilenceMins, alertname)
 	for _, k := range []string{"TEAMS_WEBHOOK_URL", "TEAMS_CHAT_WEBHOOK_URL"} {
 		if url := os.Getenv(k); url != "" {
 			go postTeamsCard(url, text)

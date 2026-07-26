@@ -1,0 +1,43 @@
+# hyde/lab: custom Teams notification templates. Clean layout, severity-aware,
+# action-forward, and NO silence/footer links. Critical is loud and states that
+# it repeats until resolved.
+apiVersion: 1
+templates:
+  - orgId: 1
+    name: hyde
+    template: |
+      {{ define "hyde.subject" -}}
+      {{ if eq .CommonLabels.severity "critical" }}🚨 CRITICAL · ACTION REQUIRED — {{ .CommonLabels.alertname }}
+      {{- else if eq .CommonLabels.severity "warning" }}⚠️ WARNING — {{ .CommonLabels.alertname }}
+      {{- else }}ℹ️ {{ .CommonLabels.alertname }}{{ end }}
+      {{- end }}
+
+      {{ define "hyde.body" -}}
+      {{ range .Alerts -}}
+      {{ if eq .Status "resolved" }}✅ **RESOLVED** — {{ .Annotations.summary }}
+
+      {{ continue }}{{ end -}}
+      {{ if eq .Labels.severity "critical" -}}
+      🚨🚨  **CRITICAL ALERT — IMMEDIATE ACTION REQUIRED**  🚨🚨
+
+      **{{ .Annotations.summary }}**
+
+      ⛔ **REQUIRED ACTION**
+      {{ .Annotations.action }}
+
+      🔴 Charger: **PEAK250** · A2111LHE0212606001 — category **{{ .Labels.category }}** — fired {{ .StartsAt.Format "2006-01-02 15:04 UTC" }}
+
+      _This alert keeps repeating until the condition clears. Do not ignore it._
+      {{- else if eq .Labels.severity "warning" -}}
+      ⚠️ **{{ .Annotations.summary }}**
+
+      **Action:** {{ .Annotations.action }}
+
+      PEAK250 · category **{{ .Labels.category }}** · fired {{ .StartsAt.Format "2006-01-02 15:04 UTC" }}
+      {{- else -}}
+      ℹ️ {{ .Annotations.summary }}
+
+      _{{ .Labels.category }} · {{ .StartsAt.Format "2006-01-02 15:04 UTC" }}_
+      {{- end }}
+      {{ end -}}
+      {{- end }}

@@ -1,7 +1,8 @@
-# hyde/lab: Teams contact points. The webhook URL is injected from the
-# TEAMS_WEBHOOK_URL env var (set as a Dokploy compose env — never in git).
-# Two receivers share the URL: the events one suppresses resolved-messages
-# so info-level session/boot events don't double-notify.
+# hyde/lab: Teams contact points. The webhook URLs are injected from env
+# (TEAMS_WEBHOOK_URL / TEAMS_CHAT_WEBHOOK_URL) — Dokploy compose env, never in git.
+# Each receiver uses the custom hyde templates (clean, severity-aware, no silence
+# link). Two channel receivers (main + resolve-suppressed events); one escalate
+# point that fans warning+critical to the channel AND the Felix/Prince chat.
 apiVersion: 1
 contactPoints:
   - orgId: 1
@@ -11,6 +12,8 @@ contactPoints:
         type: teams
         settings:
           url: ${TEAMS_WEBHOOK_URL}
+          title: '{{ template "hyde.subject" . }}'
+          message: '{{ template "hyde.body" . }}'
         disableResolveMessage: false
   - orgId: 1
     name: hyde-teams-events
@@ -19,6 +22,8 @@ contactPoints:
         type: teams
         settings:
           url: ${TEAMS_WEBHOOK_URL}
+          title: '{{ template "hyde.subject" . }}'
+          message: '{{ template "hyde.body" . }}'
         disableResolveMessage: true
   # warning + critical go to BOTH the channel and the Felix/Prince chat.
   - orgId: 1
@@ -28,9 +33,13 @@ contactPoints:
         type: teams
         settings:
           url: ${TEAMS_WEBHOOK_URL}
+          title: '{{ template "hyde.subject" . }}'
+          message: '{{ template "hyde.body" . }}'
         disableResolveMessage: false
       - uid: hyde-escalate-chat
         type: teams
         settings:
           url: ${TEAMS_CHAT_WEBHOOK_URL}
+          title: '{{ template "hyde.subject" . }}'
+          message: '{{ template "hyde.body" . }}'
         disableResolveMessage: false

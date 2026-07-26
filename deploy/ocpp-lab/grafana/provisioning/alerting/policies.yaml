@@ -1,0 +1,27 @@
+# hyde/lab: severity-based routing. All alerts go to Teams; critical is fast
+# and repeats hourly, warning is grouped, info events are batched (12h repeat)
+# and routed to the resolve-suppressed receiver.
+apiVersion: 1
+policies:
+  - orgId: 1
+    receiver: hyde-teams
+    group_by: ['alertname']
+    routes:
+      - receiver: hyde-teams
+        object_matchers:
+          - ['severity', '=', 'critical']
+        group_wait: 10s
+        group_interval: 1m
+        repeat_interval: 1h
+      - receiver: hyde-teams
+        object_matchers:
+          - ['severity', '=', 'warning']
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 4h
+      - receiver: hyde-teams-events
+        object_matchers:
+          - ['severity', '=', 'info']
+        group_wait: 1m
+        group_interval: 10m
+        repeat_interval: 12h

@@ -33,6 +33,11 @@ services:
       - SCHEDULED_RESET_AT=04:00        # daily idle-aware reset (UTC = 06:00 CEST); empty disables
       - SCHEDULED_RESET_TYPE=Soft       # Soft | Hard
       - SCHEDULED_RESET_GRACE_MIN=30    # wait this long for an idle window before skipping
+      # Alert acknowledgement (/api/alerts/ack) — creates a Grafana silence + posts back to Teams.
+      - GRAFANA_SILENCE_URL=https://ocpp-lab.hydecharge.com/grafana/api/alertmanager/grafana/api/v2/silences
+      - GRAFANA_AUTH=admin:ocpplab
+      - TEAMS_WEBHOOK_URL=${TEAMS_WEBHOOK_URL:-}
+      - TEAMS_CHAT_WEBHOOK_URL=${TEAMS_CHAT_WEBHOOK_URL:-}
     depends_on:
       timescale:
         condition: service_started
@@ -128,7 +133,7 @@ services:
       # Teams alerting webhook — injected from the Dokploy compose env (never in git).
       - TEAMS_WEBHOOK_URL=${TEAMS_WEBHOOK_URL:-}
       - TEAMS_CHAT_WEBHOOK_URL=${TEAMS_CHAT_WEBHOOK_URL:-}  # Felix/Prince chat (warning+critical)
-      - ALERTCFG=teams-v3  # bump to force a Grafana recreate when alerting provisioning changes
+      - ALERTCFG=teams-v4  # bump to force a Grafana recreate when alerting provisioning changes
     networks:
       - sim
       - dokploy-network

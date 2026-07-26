@@ -63,6 +63,9 @@ func route(w http.ResponseWriter, r *http.Request, h *CentralSystemHandler) {
 	switch {
 	case r.Method == http.MethodGet && path == "/api/health":
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "time": time.Now().UTC()})
+	case r.Method == http.MethodGet && path == "/api/alerts/ack":
+		handleAck(w, r) // open GET: acknowledge a critical alert from a Teams link
+
 	case r.Method == http.MethodGet && path == "/api/openapi.yaml":
 		w.Header().Set("Content-Type", "application/yaml")
 		_, _ = w.Write(openapiSpec)

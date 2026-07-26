@@ -18,16 +18,15 @@ templates:
 
       {{ continue }}{{ end -}}
       {{ if eq .Labels.severity "critical" -}}
-      🚨🚨  **CRITICAL ALERT — IMMEDIATE ACTION REQUIRED**  🚨🚨
+      🚨 **Critical charger alert — please take a look**
 
       **{{ .Annotations.summary }}**
 
-      ⛔ **REQUIRED ACTION**
-      {{ .Annotations.action }}
+      👉 [**Acknowledge — I'm looking into it**](https://ocpp-lab.hydecharge.com/api/alerts/ack?alertname={{ .Labels.alertname | urlquery }})
 
-      🔴 Charger: **PEAK250** · A2111LHE0212606001 — category **{{ .Labels.category }}** — fired {{ .StartsAt.Format "2006-01-02 15:04 UTC" }}
+      PEAK250 · A2111LHE0212606001 · **{{ .Labels.category }}** · {{ .StartsAt.Format "2006-01-02 15:04 UTC" }}
 
-      _This alert keeps repeating until the condition clears. Do not ignore it._
+      _These reminders repeat until someone taps Acknowledge above, or the issue clears._
       {{- else if eq .Labels.severity "warning" -}}
       ⚠️ **{{ .Annotations.summary }}**
 

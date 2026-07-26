@@ -133,7 +133,7 @@ services:
       # Teams alerting webhook — injected from the Dokploy compose env (never in git).
       - TEAMS_WEBHOOK_URL=${TEAMS_WEBHOOK_URL:-}
       - TEAMS_CHAT_WEBHOOK_URL=${TEAMS_CHAT_WEBHOOK_URL:-}  # Felix/Prince chat (warning+critical)
-      - ALERTCFG=teams-v4  # bump to force a Grafana recreate when alerting provisioning changes
+      - ALERTCFG=teams-v5  # bump to force a Grafana recreate when alerting provisioning changes
     networks:
       - sim
       - dokploy-network

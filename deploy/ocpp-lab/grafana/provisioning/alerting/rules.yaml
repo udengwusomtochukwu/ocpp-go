@@ -99,11 +99,14 @@ groups:
       relativeTimeRange:
         from: 1800
         to: 0
-      datasourceUid: prometheus
+      datasourceUid: loki
       model:
         refId: A
-        expr: sum(increase(ocpp_faults_total[30m])) or vector(0)
-        instant: true
+        datasource:
+          type: loki
+          uid: loki
+        expr: sum(count_over_time({service_name="ocpp-central-system"} |~ `charger fault` [30m]))
+        queryType: instant
     - refId: C
       relativeTimeRange:
         from: 0
@@ -135,11 +138,14 @@ groups:
       relativeTimeRange:
         from: 900
         to: 0
-      datasourceUid: prometheus
+      datasourceUid: loki
       model:
         refId: A
-        expr: sum(increase(ocpp_events_total{type="boot"}[15m])) or vector(0)
-        instant: true
+        datasource:
+          type: loki
+          uid: loki
+        expr: sum(count_over_time({service_name="ocpp-central-system"} |~ `boot confirmed` [15m]))
+        queryType: instant
     - refId: C
       relativeTimeRange:
         from: 0
@@ -219,13 +225,16 @@ groups:
     data:
     - refId: A
       relativeTimeRange:
-        from: 300
+        from: 600
         to: 0
-      datasourceUid: prometheus
+      datasourceUid: loki
       model:
         refId: A
-        expr: sum(increase(ocpp_faults_total[5m])) or vector(0)
-        instant: true
+        datasource:
+          type: loki
+          uid: loki
+        expr: sum(count_over_time({service_name="ocpp-central-system"} |~ `charger fault` [5m]))
+        queryType: instant
     - refId: C
       relativeTimeRange:
         from: 0
@@ -377,13 +386,16 @@ groups:
     data:
     - refId: A
       relativeTimeRange:
-        from: 300
+        from: 600
         to: 0
-      datasourceUid: prometheus
+      datasourceUid: loki
       model:
         refId: A
-        expr: sum(increase(ocpp_transactions_started_total{mode="live"}[5m])) or vector(0)
-        instant: true
+        datasource:
+          type: loki
+          uid: loki
+        expr: sum(count_over_time({service_name="ocpp-central-system"} |~ `started transaction` [5m]))
+        queryType: instant
     - refId: C
       relativeTimeRange:
         from: 0
@@ -413,13 +425,16 @@ groups:
     data:
     - refId: A
       relativeTimeRange:
-        from: 300
+        from: 600
         to: 0
-      datasourceUid: prometheus
+      datasourceUid: loki
       model:
         refId: A
-        expr: sum(increase(ocpp_transactions_stopped_total{mode="live"}[5m])) or vector(0)
-        instant: true
+        datasource:
+          type: loki
+          uid: loki
+        expr: sum(count_over_time({service_name="ocpp-central-system"} |~ `stopped transaction` [5m]))
+        queryType: instant
     - refId: C
       relativeTimeRange:
         from: 0
@@ -449,13 +464,16 @@ groups:
     data:
     - refId: A
       relativeTimeRange:
-        from: 300
+        from: 600
         to: 0
-      datasourceUid: prometheus
+      datasourceUid: loki
       model:
         refId: A
-        expr: sum(increase(ocpp_events_total{type="boot",mode="live"}[5m])) or vector(0)
-        instant: true
+        datasource:
+          type: loki
+          uid: loki
+        expr: sum(count_over_time({service_name="ocpp-central-system"} |~ `boot confirmed` [5m]))
+        queryType: instant
     - refId: C
       relativeTimeRange:
         from: 0

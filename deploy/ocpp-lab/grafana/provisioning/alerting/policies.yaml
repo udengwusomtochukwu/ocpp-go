@@ -7,13 +7,13 @@ policies:
     receiver: hyde-teams
     group_by: ['alertname']
     routes:
-      - receiver: hyde-teams
+      - receiver: hyde-escalate
         object_matchers:
           - ['severity', '=', 'critical']
         group_wait: 10s
         group_interval: 1m
         repeat_interval: 1h
-      - receiver: hyde-teams
+      - receiver: hyde-escalate
         object_matchers:
           - ['severity', '=', 'warning']
         group_wait: 30s

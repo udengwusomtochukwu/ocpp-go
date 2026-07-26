@@ -127,7 +127,8 @@ services:
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/dashboards/hyde-home.json
       # Teams alerting webhook — injected from the Dokploy compose env (never in git).
       - TEAMS_WEBHOOK_URL=${TEAMS_WEBHOOK_URL:-}
-      - ALERTCFG=teams-v1  # bump to force a Grafana recreate when alerting provisioning changes
+      - TEAMS_CHAT_WEBHOOK_URL=${TEAMS_CHAT_WEBHOOK_URL:-}  # Felix/Prince chat (warning+critical)
+      - ALERTCFG=teams-v2  # bump to force a Grafana recreate when alerting provisioning changes
     networks:
       - sim
       - dokploy-network

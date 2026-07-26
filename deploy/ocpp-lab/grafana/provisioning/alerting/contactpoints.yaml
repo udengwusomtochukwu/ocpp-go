@@ -20,3 +20,17 @@ contactPoints:
         settings:
           url: ${TEAMS_WEBHOOK_URL}
         disableResolveMessage: true
+  # warning + critical go to BOTH the channel and the Felix/Prince chat.
+  - orgId: 1
+    name: hyde-escalate
+    receivers:
+      - uid: hyde-escalate-channel
+        type: teams
+        settings:
+          url: ${TEAMS_WEBHOOK_URL}
+        disableResolveMessage: false
+      - uid: hyde-escalate-chat
+        type: teams
+        settings:
+          url: ${TEAMS_CHAT_WEBHOOK_URL}
+        disableResolveMessage: false
